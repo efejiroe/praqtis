@@ -1,0 +1,14 @@
+# Raw NHS data downloads — downloaded fresh by GitHub Actions each run
+data_pipeline/raw_data/*.zip
+data_pipeline/raw_data/*.csv
+data_pipeline/raw_data/*.xlsx
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Claude Code
+.claude/
+~/

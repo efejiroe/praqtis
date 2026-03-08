@@ -8,8 +8,8 @@ on:
     # Allows manual triggering from the GitHub Actions UI
 
 jobs:
-  extract:
-    name: Extract — Download Latest NHS Appointments CSV
+  etl:
+    name: Extract, Transform & Load NHS GP Data
     runs-on: ubuntu-latest
 
     steps:
@@ -26,16 +26,28 @@ jobs:
       - name: Install dependencies
         run: pip install -r data_pipeline/requirements.txt
 
-      - name: Run scraper
+      # --- Extract -----------------------------------------------------------
+
+      - name: Extract — Appointments in General Practice
         run: python data_pipeline/scrape_appointments.py
 
-      # -----------------------------------------------------------------------
-      # Future step placeholder: commit downloaded data back to the repo
-      # -----------------------------------------------------------------------
-      # - name: Commit raw data
-      #   run: |
-      #     git config user.name  "github-actions[bot]"
-      #     git config user.email "github-actions[bot]@users.noreply.github.com"
-      #     git add data_pipeline/raw_data/
-      #     git diff --cached --quiet || git commit -m "chore: update NHS appointments data [skip ci]"
-      #     git push
+      - name: Extract — Patients Registered at a GP Practice
+        run: python data_pipeline/scrape_gp_patients.py
+
+      - name: Extract — Quality and Outcomes Framework (QOF)
+        run: python data_pipeline/scrape_qof.py
+
+      # --- Transform ---------------------------------------------------------
+
+      - name: Transform — Join datasets, cluster practices, compute metrics
+        run: python data_pipeline/transform_data.py
+
+      # --- Load --------------------------------------------------------------
+
+      - name: Load — Commit output data to repository
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_pipeline/output/practice_data.json
+          git diff --cached --quiet || git commit -m "chore: update practice data [skip ci]"
+          git push
