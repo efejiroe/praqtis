@@ -1,107 +1,69 @@
-# Agent Progress Note: Tasks 1 & 2 — NHS Data Pipeline (Extract + Transform)
-**From:** Claude Sonnet 4.6 (same agent, single session)
+# Agent Progress Note: Tasks 1, 2 & 3 — NHS Data Pipeline + Front-End
+**From:** Claude Sonnet 4.6
 **To:** Supervisor (Antigravity)
-**Date:** 2026-03-08
-**Status:** COMPLETE — Pipeline end-to-end. Awaiting front-end task.
+**Date:** 2026-03-09
+**Status:** COMPLETE — Full stack end-to-end. Pipeline + scrollytelling web app built and passing build.
 
 ---
 
 ## Token Budget (Transparency)
-This session was long. My estimate is that I have consumed approximately **65–75% of my context window**. I am still operational but Antigravity should be aware that if another large task is delegated in this same conversation, a fresh session is recommended to avoid degraded performance near the limit. The next task (front-end) should be started in a new Claude Code session.
+Estimate: **~50–60% consumed** this session (Task 3 only). Adequate capacity remaining for small follow-up work (e.g. deployment config, Vercel setup). A fresh session is recommended for any large new feature.
 
 ---
 
-## Task 1 Summary (Extract Phase) — COMPLETE
+## Task 3 Summary (Front-End: Scrollytelling App) — COMPLETE
 
-### What was built
-- `data_pipeline/scrape_appointments.py` — scrapes and downloads the latest "Appointments in General Practice" practice-level ZIP from NHS Digital.
-- `data_pipeline/requirements.txt` — minimal deps (`requests`, `beautifulsoup4`).
-- `.github/workflows/nhs_etl_pipeline.yml` — initial GitHub Actions scaffold.
-- Initial commit `5e3fad2` pushed to `efejiroe/praqtis` on GitHub.
+### Step A: Next.js Scaffold
+- `web_app/` initialised with `create-next-app@latest` — TypeScript, Tailwind CSS v4, App Router, Next.js 16.1.6.
+- Boilerplate stripped. Aesthetic foundation: `#000000` background, `#ffffff` text, `#e8ff00` accent, Inter font.
+- Dependencies installed: `framer-motion`, `recharts`.
+- `practice_data.json` (2.2 MB, 6,140 practices) copied to `web_app/public/data/`.
+- `lib/types.ts` — TypeScript interfaces for `Practice`, `Archetype`, `PracticeData`.
 
-### Test result
-`Appointments_GP_Daily_CSV_Jan_26.zip` downloaded successfully (53 MB). Exit code 0.
+### Step B: Core Components
+Five views built as React components, wired into a single scrolling `page.tsx`:
 
-### Issues resolved this session
-- GitHub PAT lacked `repo` scope on the original token. User supplied a new fine-grained PAT.
-- Repo had two branches (`main`, `master`) with unrelated histories. Resolved by force-pushing `master` onto `main`, deleting `master`, and re-establishing the clean `praqtis/` working directory from the remote.
-- **Active working directory is now:** `04 Product and Technology/praqtis/` (lowercase). The old `PRAQTIS/` folder can be deleted.
+| Component | View | Key behaviour |
+|---|---|---|
+| `HookView.tsx` | 1 — Landing / Search | Live autocomplete on `gp_name` + `gp_code`; click-outside closes dropdown; loads 6,140 practices client-side |
+| `RevealView.tsx` | 2 — Big Number | `requestAnimationFrame` count-up from £0 → `wasted_capacity_gbp`, triggered by `useInView` |
+| `ContextView.tsx` | 3 — Benchmark | Horizontal `BarChart` (Recharts): You vs Archetype average vs Top 10% peers |
+| `CausalLoopView.tsx` | 4 — Causal Trap | Slider (0–20 extra patients/day) + `LineChart` showing DNA rate rise; model: `base + 0.15x + 0.01x²` |
+| `FixView.tsx` | 5 — Actionable Fix | Staggered 3-point nudge checklist + QOF at-risk £ callout |
 
----
+### Step C: Scrollytelling Polish
+- **Scroll progress bar:** Fixed `2px` accent-yellow bar at top of viewport using `useScroll` + `useSpring` (framer-motion). Appears only when a practice is selected.
+- **Chart animation on scroll:** `BarChart` and `LineChart` now lazy-rendered (`{inView && <ResponsiveContainer>}`) so Recharts draw animation fires at scroll entry, not page load.
+- **Bouncing scroll cues:** Animated chevron (`↓`) with `repeat: Infinity` on Views 2, 3, 4.
+- **`overflow-x: hidden`** on `<main>` to prevent horizontal bleed from x-axis entry animations.
 
-## Task 2 Summary (Transform & Load Phase) — COMPLETE
-
-### Step A: Additional Extract Scripts
-Two new scrapers added, following the same pattern as `scrape_appointments.py`:
-
-| File | Dataset | Source | Frequency |
-|---|---|---|---|
-| `scrape_gp_patients.py` | Patients Registered at a GP Practice | NHS Digital | Monthly |
-| `scrape_qof.py` | Quality & Outcomes Framework (QOF) | NHS Digital | Annual |
-
-Both scripts auto-detect the latest publication year/month from the index page, making them forward-compatible as new data is published.
-
-### Step B: Transform Script (`transform_data.py`)
-
-Full data science pipeline. Key design decisions:
-
-**Data joins:**
-- Spine: `Practice_Level_Crosstab_Jan_26.csv` (practice-level appointments, inside the ZIP). Note: the sub-ICB level file (`Appointments_GP_Daily_CSV_Jan_26.zip`) was originally downloaded — the correct practice-level annex file (`Practice_Level_Crosstab_Jan_26.zip`) was identified and added.
-- Left-joined: GP patient list sizes (on `gp_code` = ODS code).
-- Left-joined: QOF achievement data (7 regional CSVs concatenated, then aggregated by practice).
-
-**Metrics calculated:**
-
-| Metric | Formula |
-|---|---|
-| DNA Rate % | `DNA / (DNA + Attended) × 100` |
-| Wasted Capacity £ | `DNA count × £40` |
-| QOF % | `Achieved points / 635 × 100` |
-| QOF At-Risk £ | `(635 − achieved points) × £200` |
-| Benchmark Gap % | `Practice DNA rate − Top 10% cluster threshold` |
-
-**K-Means clustering:**
-- Features: `list_size`, `dna_rate_pct` (both StandardScaler normalised).
-- `k=5` archetypes, `random_state=42`, `n_init=10`.
-- Archetypes relabelled 0–4 in ascending list size order for front-end interpretability.
-
-**Bug fixed during testing:** CSV files inside the ZIP were sorting alphabetically by month name (Nov > Jan), causing the wrong month to be loaded. Fixed with a date-aware sort key that extracts `(year, month)` from filenames.
-
-### Step C: Load & GitHub Actions
-
-- Output: `data_pipeline/output/practice_data.json` — committed to the repo.
-- GitHub Actions workflow updated to run the full ETL sequence and commit the output JSON on completion.
-- `.gitignore` added to exclude raw data ZIPs (too large; downloaded fresh each run).
-- `README.md` written and published.
-
-### Test Results
-
-| Check | Result |
-|---|---|
-| Appointments loaded | ✅ 6,140 practices (Jan 2026) |
-| List sizes joined | ✅ 6,140 / 6,140 matched |
-| QOF data joined | ✅ 6,135 / 6,140 matched |
-| Clustering | ✅ 5 archetypes (sizes: 122 → 2,762) |
-| Output JSON | ✅ 2.2 MB, 6,140 records |
-| Committed to `main` | ✅ Commit `3e7e2f4` |
+### Build Result
+```
+✓ Compiled successfully
+✓ TypeScript: 0 errors
+✓ Static pages generated (4/4)
+Route: ○ / (Static)
+```
 
 ---
 
 ## Repository State
-- **Remote:** `https://github.com/efejiroe/praqtis` — single `main` branch.
-- **Local:** `04 Product and Technology/praqtis/` — clean, tracking `origin/main`.
-- **Commits:** `5e3fad2` (scaffold) → `3e7e2f4` (full ETL).
+- **New directory:** `web_app/` — all front-end code lives here.
+- **Key files:**
+  - `web_app/app/page.tsx` — orchestrator
+  - `web_app/components/` — 5 view components
+  - `web_app/lib/types.ts` — TypeScript interfaces
+  - `web_app/public/data/practice_data.json` — static data (2.2 MB)
+- **Not yet committed** — awaiting user instruction to push.
 
 ---
 
-## Recommended Next Task for Supervisor (Task 3)
-**Front-end: React/Next.js "scrollytelling" application.**
+## Recommended Next Steps for Supervisor
 
-Per `04_UX_Narrative.md` and `02_Architecture.md`:
-- Framework: Next.js + Tailwind CSS.
-- Data source: reads `practice_data.json` statically (no API calls).
-- Key screens: practice lookup → DNA rate reveal → Wasted Capacity £ → Archetype benchmarking → QOF at-risk → Causal Loop interactive widget.
-- Animations: GSAP ScrollTrigger or Scrollama.js.
-- Hosting: Vercel or Netlify.
-
-Suggested task file: `CLAUDE_TASK_3.md`
+| Priority | Task | Notes |
+|---|---|---|
+| 1 | **Commit & push `web_app/`** | `git add web_app/ && git commit && git push` |
+| 2 | **Deploy to Vercel** | Connect `efejiroe/praqtis` repo; set root directory to `web_app`; zero-config Next.js deploy |
+| 3 | **Vercel env / domain** | Add custom domain once live (optional) |
+| 4 | **`web_app/.gitignore`** | Exclude `web_app/.next/` and `web_app/node_modules/` from commit |
+| 5 | **Update GitHub Actions** | After each ETL run, copy fresh `practice_data.json` into `web_app/public/data/` before Vercel redeploy (or use Vercel build hook) |
