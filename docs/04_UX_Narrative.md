@@ -16,14 +16,13 @@ This document dictates what the user actually sees on their screen. The design s
 * **Visual (Scroll triggered):** A simple dot-plot or horizontal bar chart animates into view.
 * **Text:** "A DNA rate of **[User%]** looks bad. But let's look at the context. We compared you only against practices that look exactly like yours (similar size and local demographics). Compared to the top 10% of your exact peers, you are underperforming by **[Gap%]**."
 
-## View 4: The Unintended Consequence (Interactive Widget)
-* **Visual (Scroll triggered):** An interactive line chart with a slider.
-* **Text:** "How do you fix this? The traditional answer is to cram more appointments in to offset the loss. Let's see what happens if you do that."
-* **Action:** User pulls the slider to increase "patients per day." The chart visually demonstrates the trap: "Rushed clinicians = confused patients = higher no-show rates next month."
+## View 4: The Root Cause (The "Frequent Flyers")
+* **Visual (Scroll triggered):** A Pareto chart or a visual representation of a patient list.
+* **Text:** "Why are you worse than your peers? Because you are treating all your patients the same. Based on the deprivation index of your patient list, **[X%]** of those £4,000 losses were likely caused by a core **[Y%]** of chronic 'frequent flyer' patients. Automated SMS systems do not work on this cohort."
 
-## View 5: The Actionable Fix (Behavioral Nudges)
-* **Visual:** A crisp, rigid 3-point checklist of easy-to-implement behavioral interventions.
-* **Text:** "To reclaim this £[Lost Value], you need to change patient behavior, not work harder. Implement these 3 nudges today:"
-    1. **Cost-Aware SMS:** Send reminders stating the financial cost ("Missing your appointment costs the NHS £40" or "Wastes dedicated clinical time").
-    2. **Automated Follow-ups:** Enforce a 48-hour automated digital check-in after prescribing new chronic medication or high-value private treatments.
-    3. **Delegation:** Shift routine reviews to allied health staff to free up doctors/dentists for complex cases.
+## View 5: The Actionable Fix (The EASY Framework)
+* **Visual:** A crisp, rigid 3-point checklist of easy-to-implement behavioral interventions based on the EASY framework.
+* **Text:** "To reclaim this £[Lost Value], you don't need new software. You already have automated messaging—use it differently. The ROI is immediate: spending £1,000 on targeted SMS can halve your £4,000 monthly deficit. Implement these 3 nudges today:"
+    1. **Social & Timely (Re-write your SMS):** Stop sending generic reminders. Update your accuRx/EMIS templates to introduce a social cost ("Missing your appointment wastes £40 of dedicated clinical time"). 
+    2. **Easy (The 48-Hour Micro-Commitment):** Don't wait 3 months for a review. Make it *Easy* for the patient to engage by setting your system to send an automated digital check-in 48 hours after prescribing new medications ("Have you picked up your prescription? Y/N").
+    3. **Targeted (Predictive Profiling):** Stop texting everyone equally. Use your EMIS filters to identify patients with ≥2 previous DNAs. Divert these specific "high-risk" cohorts away from automated SMS entirely, and trigger a proactive 30-second human phone call. The human touch drastically reduces non-adherence for the most prone patients.

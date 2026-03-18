@@ -15,7 +15,9 @@ Your task is to build the Extract phase of our ETL pipeline. We need a Python sc
 
 **STOP AND PLAN:** Before executing Step A, B, or C, you must write a short, bulleted technical plan of the exact libraries, URL targets, and folder structures you intend to use. Present this plan to the user/supervisor and wait for explicit approval to begin coding.
 
-Once approved, please execute the following steps sequentially, asking for user approval to run shell commands where necessary:
+**TOKEN MODULARITY RULE:** Claude Code has strict token and context limits. You are instructed to work in focused sprints. Do not attempt all steps simultaneously. At the end of Step A, output a summary of what was done and explicitly check in with the user (e.g., "Step A completed. Awaiting permission to begin Step B."). This prevents you from running out of tokens or losing context mid-operation.
+
+Once your plan is approved, please execute the following steps sequentially:
 
 ### Step A: Git & Project Initialization
 1. Check if the current directory (`PRAQTIS`) is already a git repository.

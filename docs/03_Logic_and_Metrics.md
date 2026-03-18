@@ -13,10 +13,9 @@ The tool needs hard numbers to create "Shock Value" for the user. These formulas
 * **Formula:** `(User DNA Rate%) - (Top 10% Cluster Average DNA Rate%) = Gap%`
 * **Interpretation:** "Compared to 150 urban practices with the exact same patient demographics, your DNA rate is [Gap%] worse."
 
-### Metric 3: The Attrition Risk (QOF or Private Treatment Plans)
-* **Goal:** Show the money at risk due to missed chronic reviews or unaccepted private treatment plans.
-* **Interpretation (NHS GP):** "Missed chronic reviews are putting an estimated £[X] of your annual QOF bonus at risk."
-* **Interpretation (Private/Dental):** "Your current follow-up drop-off rate is putting £[X] of diagnosed private treatment plans at risk of never being scheduled."
+### Metric 3: The High-Risk Concentration (The "Frequent Flyers")
+* **Goal:** Prove to the PM that universal strategies (like blasting SMS to everyone) waste money because the problem is concentrated in a tiny sliver of their patient list.
+* **Interpretation:** "However, your DNA problem isn't evenly distributed. Based on public demographic data for your area, an estimated **[Y%]** of your DNAs are caused by just **[Z%]** of your highest-risk patients. You are wasting administrative effort on the wrong people."
 
 ## 2. Nudge Theory & Unintended Consequences (The Causal Loop)
 The tool must contain an interactive widget that explains *why* the standard fix fails, using basic behavioral principles.
