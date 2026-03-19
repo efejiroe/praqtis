@@ -5,7 +5,7 @@ import { Practice, PracticeData } from "@/lib/types";
 import HookView from "@/components/HookView";
 import RevealView from "@/components/RevealView";
 import ContextView from "@/components/ContextView";
-import CausalLoopView from "@/components/CausalLoopView";
+import FrequentFlyersView from "@/components/FrequentFlyersView";
 import FixView from "@/components/FixView";
 
 export default function Home() {
@@ -46,7 +46,7 @@ export default function Home() {
               <RevealView practice={selected} />
             </div>
             <ContextView practice={selected} archetypes={data.archetypes} />
-            <CausalLoopView practice={selected} />
+            <FrequentFlyersView practice={selected} />
             <FixView practice={selected} />
           </>
         )}

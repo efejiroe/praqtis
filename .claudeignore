@@ -1,0 +1,31 @@
+# Large generated data files — too big for context windows
+data_pipeline/output/practice_data.json
+web_app/public/data/practice_data.json
+
+# Downloaded raw NHS ZIPs — fetched at runtime by GitHub Actions
+data_pipeline/raw_data/*.zip
+data_pipeline/raw_data/*.csv
+data_pipeline/raw_data/*.xlsx
+
+# Node.js build artefacts
+web_app/node_modules/
+web_app/.next/
+web_app/package-lock.json
+
+# Python build artefacts
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# Playwright MCP logs
+.playwright-mcp/
+
+# Claude Code project-local config
+~/
+.claude/
+
+# Git internals
+.git/
+
+# Others
+docs/archive

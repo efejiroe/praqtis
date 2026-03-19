@@ -1,69 +1,85 @@
-# Agent Progress Note: Tasks 1, 2 & 3 — NHS Data Pipeline + Front-End
+# Agent Progress Note — PRAQTIS Full Stack
 **From:** Claude Sonnet 4.6
 **To:** Supervisor (Antigravity)
-**Date:** 2026-03-09
-**Status:** COMPLETE — Full stack end-to-end. Pipeline + scrollytelling web app built and passing build.
+**Date:** 2026-03-19
+**Status:** COMPLETE — All tasks done. Codebase cleaned. Build passing. Ready for Vercel deploy.
 
 ---
 
-## Token Budget (Transparency)
-Estimate: **~50–60% consumed** this session (Task 3 only). Adequate capacity remaining for small follow-up work (e.g. deployment config, Vercel setup). A fresh session is recommended for any large new feature.
+## Token Budget
+Estimate: **~45–55% consumed** this session. Fresh session recommended for Vercel deploy/config work.
 
 ---
 
-## Task 3 Summary (Front-End: Scrollytelling App) — COMPLETE
+## Session Summary (2026-03-19)
 
-### Step A: Next.js Scaffold
-- `web_app/` initialised with `create-next-app@latest` — TypeScript, Tailwind CSS v4, App Router, Next.js 16.1.6.
-- Boilerplate stripped. Aesthetic foundation: `#000000` background, `#ffffff` text, `#e8ff00` accent, Inter font.
-- Dependencies installed: `framer-motion`, `recharts`.
-- `practice_data.json` (2.2 MB, 6,140 practices) copied to `web_app/public/data/`.
-- `lib/types.ts` — TypeScript interfaces for `Practice`, `Archetype`, `PracticeData`.
+### Task 3.1 — Narrative Refactor (COMPLETE)
 
-### Step B: Core Components
-Five views built as React components, wired into a single scrolling `page.tsx`:
+**View 4 replaced:** `CausalLoopView.tsx` → `FrequentFlyersView.tsx`
+- Pareto / 80-20 visual: ~20% of patients drive ~80% of DNA losses
+- Two impact stat blocks: high-risk patient count + concentrated cost in £
+- Horizontal BarChart (Recharts) — yellow bar = high-risk cohort, dark = everyone else
+- Derived from live `practice.dna_count`, `practice.list_size`, `practice.wasted_capacity_gbp`
 
-| Component | View | Key behaviour |
-|---|---|---|
-| `HookView.tsx` | 1 — Landing / Search | Live autocomplete on `gp_name` + `gp_code`; click-outside closes dropdown; loads 6,140 practices client-side |
-| `RevealView.tsx` | 2 — Big Number | `requestAnimationFrame` count-up from £0 → `wasted_capacity_gbp`, triggered by `useInView` |
-| `ContextView.tsx` | 3 — Benchmark | Horizontal `BarChart` (Recharts): You vs Archetype average vs Top 10% peers |
-| `CausalLoopView.tsx` | 4 — Causal Trap | Slider (0–20 extra patients/day) + `LineChart` showing DNA rate rise; model: `base + 0.15x + 0.01x²` |
-| `FixView.tsx` | 5 — Actionable Fix | Staggered 3-point nudge checklist + QOF at-risk £ callout |
+**View 5 refactored:** `FixView.tsx` — EASY framework
+- ROI callout box (yellow border): "£1,000 investment → £X/month recovered"
+- 3 nudges now explicitly labelled: Social & Timely / Easy / Targeted
+- Language matches `04_UX_Narrative.md` exactly (accuRx/EMIS, 48-hr micro-commitment, EMIS ≥2 DNA filter)
+- QOF callout removed (cleaner narrative)
 
-### Step C: Scrollytelling Polish
-- **Scroll progress bar:** Fixed `2px` accent-yellow bar at top of viewport using `useScroll` + `useSpring` (framer-motion). Appears only when a practice is selected.
-- **Chart animation on scroll:** `BarChart` and `LineChart` now lazy-rendered (`{inView && <ResponsiveContainer>}`) so Recharts draw animation fires at scroll entry, not page load.
-- **Bouncing scroll cues:** Animated chevron (`↓`) with `repeat: Infinity` on Views 2, 3, 4.
-- **`overflow-x: hidden`** on `<main>` to prevent horizontal bleed from x-axis entry animations.
+**`page.tsx` updated:** `CausalLoopView` → `FrequentFlyersView` import and render
 
-### Build Result
+### Folder Cleanup (COMPLETE)
+
+| Action | Detail |
+|---|---|
+| `.claudeignore` created | Excludes `practice_data.json`, raw ZIPs, `node_modules/`, `.next/`, pyc files, playwright logs |
+| `docs/archive/` created | Historical task delegation files moved here |
+| Archived | `CLAUDE_TASK_1.md`, `CLAUDE_TASK_2.md`, `CLAUDE_TASK_3.md`, `CLAUDE_TASK_3.1.md`, `AGENT_PROGRESS_NOTE.md` (previous), `docs/_HANDOVER.md` |
+| Removed | `web_app/public/` boilerplate SVGs (5 files, none referenced in code) |
+| Removed | `.playwright-mcp/` log folder |
+| `README.md` updated | Reflects full-stack status, new folder tree, local dev + deploy instructions |
+
+### Build Verification (PASS)
 ```
-✓ Compiled successfully
+✓ Compiled successfully (Turbopack, 4.4s)
 ✓ TypeScript: 0 errors
-✓ Static pages generated (4/4)
+✓ Static pages: 4/4 generated
 Route: ○ / (Static)
 ```
 
 ---
 
-## Repository State
-- **New directory:** `web_app/` — all front-end code lives here.
-- **Key files:**
-  - `web_app/app/page.tsx` — orchestrator
-  - `web_app/components/` — 5 view components
-  - `web_app/lib/types.ts` — TypeScript interfaces
-  - `web_app/public/data/practice_data.json` — static data (2.2 MB)
-- **Not yet committed** — awaiting user instruction to push.
+## Final Folder Structure
+
+```
+PRAQTIS/
+├── .claude/, .github/, .gitignore, .claudeignore
+├── README.md
+├── docs/
+│   ├── 01_PRD.md, 02_Architecture.md, 03_Logic_and_Metrics.md, 04_UX_Narrative.md
+│   └── archive/   (CLAUDE_TASK_*.md, HANDOVER.md, old progress notes)
+├── data_pipeline/
+│   ├── scrape_appointments.py, scrape_gp_patients.py, scrape_qof.py
+│   ├── transform_data.py, requirements.txt
+│   ├── raw_data/ (gitignored), output/practice_data.json
+└── web_app/
+    ├── app/page.tsx
+    ├── components/
+    │   ├── HookView.tsx, RevealView.tsx, ContextView.tsx
+    │   ├── FrequentFlyersView.tsx   ← NEW (replaces CausalLoopView)
+    │   └── FixView.tsx              ← REFACTORED (EASY framework)
+    ├── lib/types.ts
+    └── public/data/practice_data.json
+```
 
 ---
 
-## Recommended Next Steps for Supervisor
+## Recommended Next Steps
 
 | Priority | Task | Notes |
 |---|---|---|
-| 1 | **Commit & push `web_app/`** | `git add web_app/ && git commit && git push` |
-| 2 | **Deploy to Vercel** | Connect `efejiroe/praqtis` repo; set root directory to `web_app`; zero-config Next.js deploy |
-| 3 | **Vercel env / domain** | Add custom domain once live (optional) |
-| 4 | **`web_app/.gitignore`** | Exclude `web_app/.next/` and `web_app/node_modules/` from commit |
-| 5 | **Update GitHub Actions** | After each ETL run, copy fresh `practice_data.json` into `web_app/public/data/` before Vercel redeploy (or use Vercel build hook) |
+| 1 | **Commit & push** | `git add -A && git commit && git push` — nothing committed yet |
+| 2 | **Deploy to Vercel** | Connect `efejiroe/praqtis`; root dir = `web_app`; zero-config |
+| 3 | **Sync JSON on ETL run** | After each GitHub Actions ETL run, copy `data_pipeline/output/practice_data.json` → `web_app/public/data/` before Vercel redeploy (or trigger Vercel build hook) |
+| 4 | **Custom domain** | Optional — add via Vercel dashboard once live |
