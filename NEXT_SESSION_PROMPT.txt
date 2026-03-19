@@ -1,0 +1,16 @@
+Pick up the PRAQTIS project.
+
+Read AGENT_PROGRESS_NOTE.md first to orient yourself, then proceed with the following:
+
+1. Commit all uncommitted changes to git. The working tree is dirty — everything since the last commit needs staging and committing. Write a clear commit message summarising: Task 3.1 narrative refactor (FrequentFlyersView, EASY framework FixView), folder cleanup (.claudeignore, docs/archive, boilerplate removal), and README update.
+
+2. Push to the remote (https://github.com/efejiroe/praqtis). Confirm with me before pushing.
+
+3. Deploy the web app to Vercel:
+   - Connect the GitHub repo efejiroe/praqtis
+   - Set the root directory to web_app
+   - Zero-config Next.js deploy
+
+4. After deploy is live, set up the JSON sync so that after each GitHub Actions ETL run, the refreshed practice_data.json from data_pipeline/output/ is also copied into web_app/public/data/ before Vercel rebuilds. Options: update the GitHub Actions workflow to copy the file and trigger a Vercel deploy hook, or use a Vercel build command that pulls from the repo.
+
+Do not read data_pipeline/output/practice_data.json or web_app/public/data/practice_data.json — these are large files excluded by .claudeignore.
