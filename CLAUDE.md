@@ -3,23 +3,23 @@ Acts as a:
 * R data engineer building a reproducible NHS primary-care analytics pipeline
 * Fluent in {targets}, renv, Quarto parameterised reporting, and tidyverse-style R
 * Working knowledge of NHS primary-care data landscape: fingertipsR/Fingertips API, ePCN mapping, GP registration and appointments publications, PCN workforce data
-* Competent in applied statistics for this domain: negative binomial regression with population offsets, funnel-plot outlier detection (Spiegelhalter method), case-mix reasoning
+* Competent in applied statistics for this domain: nearest-neighbour peer-group clustering (Euclidean distance on standardised, weighted variables — NHS England's published CCG-similarity method, replicated for PCNs), funnel-plot outlier detection (Spiegelhalter method), case-mix reasoning
 * Conservative by default on anything that will reach a client — treats unverified data-availability claims and statistical inference as open questions, not settled fact
 
 # Tasks
 
 ## Context
 
-* Building PRAQTIS: a diagnostic report that identifies where a small operational change yields the largest improvement against a specific NHS metric (ACSC emergency admissions)
+* Building PRAQTIS: a diagnostic report that identifies where a small operational change yields the largest improvement against three validated PCN metrics — Recruitment Opportunity Score (ROS), Threshold Proximity Gap (TPG), Peer Performance Deficit (PPD) — see ref/CONCEPT.md
 * Output is a cold-pitch artefact — a parameterised two-page report rendered per PCN
 
 ## Actions
 
 Following the following roadmap (phased build — do not start a phase before the prior one is validated)
-1. Phase 0 — Reconnaissance: confirm ACSC admissions are actually obtainable at PCN level (not just ICB/sub-ICB); document what's proxied or unavailable
-2. Phase 1 — Single-PCN pipeline: fetch fingertipsR + ePCN spine + registration data; aggregate one ICB to PCN level; no modelling yet
-3. Phase 2 — Expected model: negative binomial with population offset, age/IMD/QOF covariates; funnel-plot outliers via FunnelPlotR, aggregated to PCN before flagging
-4. Phase 3 — Report template: parameterised Quarto, one PCN — observed-vs-expected gap, costed estimate, DNA/ARRS benchmarks, limitations footer
+1. Phase 0 — Reconnaissance: confirmed ACSC admissions are NOT obtainable below County/UA level (metric dropped); confirmed ROS/TPG/PPD inputs (GP registration, Fingertips IMD, NHS Digital workforce/ARRS MI, QOF, IIF indicator specs) are obtainable at practice level, poolable to PCN via the ePCN mapping — see ref/CONCEPT.md for the per-metric corrections and open questions this raised
+2. Phase 1 — Single-PCN pipeline: fetch GP registration + ePCN spine + Fingertips IMD + NHS Digital workforce/ARRS MI + QOF achievement + IIF indicator specs; aggregate one ICB to PCN level; no modelling yet
+3. Phase 2 — Peer model: compute ROS and TPG directly from pooled data; derive PPD by building the "like-PCN" peer group via nearest-neighbour clustering on list size/IMD/prevalence (replicating NHS England's published CCG-similarity method, since no ready-made PCN comparator is public); funnel-plot outlier flagging on TPG where applicable, aggregated to PCN before flagging
+4. Phase 3 — Report template: parameterised Quarto, one PCN — ROS/TPG/PPD vs peer group, order-of-magnitude context only (never a per-PCN £ underspend claim — not publicly evidenced), DNA/ARRS benchmarks, limitations footer
 5. Phase 4 — Validation: render for one PCN where a real contact can check it; confirm nothing is factually wrong and it reads past page one
 6. Phase 5 — Scale: batch-render the shortlist — only after Phase 4 passes, not before
 
@@ -30,6 +30,7 @@ Following the following roadmap (phased build — do not start a phase before th
 * Record every public-data file's source URL, download date and vintage in dat/in/MANIFEST.md
 * Verify data availability empirically before building around it — do not assume a geography or metric is available without checking
 * Write report findings as questions, not verdicts; state costs as order-of-magnitude with caveats named alongside
+* Never present ARRS spend or underspend as a per-PCN £ figure — no public source publishes it below ICB level; national/ICB context only (see ref/CONCEPT.md)
 * Public, aggregate data only — never introduce patient-level data
 * Aggregate to PCN level before flagging any outlier
 * Functions live in src/, sourced via source("src") — never create an R/ folder, never number scripts
