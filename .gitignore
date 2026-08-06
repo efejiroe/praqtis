@@ -4,3 +4,5 @@
 .Ruserdata
 .claude/settings.local.json
 ref/
+dat/out/
+_targets/
