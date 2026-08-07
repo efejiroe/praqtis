@@ -32,3 +32,12 @@ fetch_gp_registration_pcn <- function(dest_dir = "dat/in") {
   ) |>
     dplyr::filter(ORG_TYPE == "PCN")
 }
+
+fetch_gp_registration_practice <- function(dest_dir = "dat/in") {
+  read_gp_reg_zip(
+    "https://files.digital.nhs.uk/BB/362F1A/gp-reg-pat-prac-quin-age.zip",
+    "gp-reg-pat-prac-quin-age.zip",
+    dest_dir
+  ) |>
+    dplyr::filter(ORG_TYPE == "GP")
+}
