@@ -68,6 +68,12 @@ the vintage the file itself claims to be.
 - **Vintage**: 2023/24 — the latest annual IIF file; IIF itself has since
   been slimmed to 2 indicators for 2024/25 (see ref/CONCEPT.md). Raw
   numerator/denominator only, no target thresholds or achievement %.
+- Of the 4 indicator codes in the file, 2 (NCD026 "ACC-08", NCDMI198
+  "EHCH-04") are published at both practice and PCN level — fetched at
+  practice level and summed to PCN ourselves. The other 2 (NCDMI191
+  "ACC-10b", NCDMI210 "ACC-10") are age-sex-standardised and only ever
+  published at PCN level — no practice-level equivalent exists, used
+  as-is. `pcn_iif_for_icb()` tags each row's `source` accordingly.
 
 ## Known data-quality notes
 
@@ -88,3 +94,10 @@ the vintage the file itself claims to be.
   against the current ePCN mapping — three South East London practices
   were reassigned to a different PCN between the two. `pcn_qof_for_icb()`
   always uses the current ePCN mapping's attribution, not QOF's own.
+- Per CLAUDE.md, every source is collated at GP-practice level first and
+  aggregated to PCN ourselves — even registration and IIF, which also
+  publish ready-made PCN-level rows — so a future report can drill down
+  to practice level. Checked that this doesn't silently change the
+  numbers: summing practice-level registration to PCN for the pilot ICB
+  gives the same total (2,087,618 patients, 37 PCNs) as using the file's
+  own PCN rows directly.

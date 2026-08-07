@@ -24,15 +24,10 @@ fetch_epcn_mapping <- function(dest_dir = "dat/in") {
   )
 }
 
-fetch_gp_registration_pcn <- function(dest_dir = "dat/in") {
-  read_gp_reg_zip(
-    "https://files.digital.nhs.uk/BB/362F1A/gp-reg-pat-prac-quin-age.zip",
-    "gp-reg-pat-prac-quin-age.zip",
-    dest_dir
-  ) |>
-    dplyr::filter(ORG_TYPE == "PCN")
-}
-
+# The file also publishes ready-made PCN-level rows (ORG_TYPE == "PCN"),
+# but per CLAUDE.md's collate-at-GP-level rule we build PCN totals
+# ourselves from practice rows (see pcn_list_size_for_icb() in
+# aggregate_pcn.R) so a future drill-down to practice level is possible.
 fetch_gp_registration_practice <- function(dest_dir = "dat/in") {
   read_gp_reg_zip(
     "https://files.digital.nhs.uk/BB/362F1A/gp-reg-pat-prac-quin-age.zip",

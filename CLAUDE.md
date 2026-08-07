@@ -33,6 +33,7 @@ Following the following roadmap (phased build — do not start a phase before th
 * Never present ARRS spend or underspend as a per-PCN £ figure — no public source publishes it below ICB level; national/ICB context only (see ref/CONCEPT.md)
 * Public, aggregate data only — never introduce patient-level data
 * Aggregate to PCN level before flagging any outlier
+* Collate every data source at GP-practice level first, then aggregate to PCN — even when a source also publishes ready-made PCN-level rows — so later work can drill down to practice level. Exception: data with no practice-level equivalent (PCN-employed/ARRS workforce; IIF's age-sex-standardised ACC-10 rate) is genuinely PCN-native — use it as-is, but say explicitly in code comments why no drill-down is possible rather than silently aggregating something that was never built from practice rows
 * Functions live in src/, sourced via source("src") — never create an R/ folder, never number scripts
 * May read the parent PRAQTIS/ folder for business context — but never write to it, and never let its content reach GitHub (committed files, report text, logs, or comments)
 * No subagents until the pipeline has rendered one report end-to-end

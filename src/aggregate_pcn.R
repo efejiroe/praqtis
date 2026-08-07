@@ -16,15 +16,19 @@ pcn_icb_lookup <- function(epcn_mapping) {
     dplyr::distinct(PRACTICE_CODE, PCN_CODE, PCN_NAME, ICB_CODE, ICB_NAME)
 }
 
-pcn_list_size_for_icb <- function(pcn_registration, epcn_mapping, icb_code) {
-  pcn_icb <- pcn_icb_lookup(epcn_mapping) |>
-    dplyr::distinct(PCN_CODE, PCN_NAME, ICB_CODE, ICB_NAME)
-
-  pcn_registration |>
+# The registration file also publishes ready-made PCN-level totals, but
+# per CLAUDE.md's collate-at-GP-level rule we sum practice-level list
+# sizes ourselves so practice-level drill-down stays possible.
+pcn_list_size_for_icb <- function(practice_registration, epcn_mapping, icb_code) {
+  practice_list_size <- practice_registration |>
     dplyr::filter(SEX == "ALL", AGE_GROUP_5 == "ALL") |>
-    dplyr::select(PCN_CODE = ORG_CODE, list_size = NUMBER_OF_PATIENTS) |>
-    dplyr::inner_join(pcn_icb, by = "PCN_CODE") |>
+    dplyr::select(PRACTICE_CODE = ORG_CODE, list_size = NUMBER_OF_PATIENTS)
+
+  pcn_icb_lookup(epcn_mapping) |>
     dplyr::filter(ICB_CODE == icb_code) |>
+    dplyr::inner_join(practice_list_size, by = "PRACTICE_CODE") |>
+    dplyr::group_by(PCN_CODE, PCN_NAME, ICB_CODE, ICB_NAME) |>
+    dplyr::summarise(list_size = sum(list_size, na.rm = TRUE), .groups = "drop") |>
     dplyr::arrange(dplyr::desc(list_size))
 }
 
@@ -90,15 +94,31 @@ pcn_qof_for_icb <- function(qof_practice_achievement, epcn_mapping, icb_code) {
     dplyr::arrange(PCN_CODE)
 }
 
-# IIF is already published at PCN level (see fetch_iif.R) — just filter to
-# the ICB, no aggregation needed. Numerator/denominator ratios and target
-# thresholds are Phase 2.
-pcn_iif_for_icb <- function(pcn_iif_indicators, epcn_mapping, icb_code) {
+# Indicators available at practice level (see fetch_iif.R) are summed to
+# PCN ourselves; the age-sex-standardised indicators that are only ever
+# published at PCN level are used as-is — `source` marks which is which,
+# rather than silently treating both the same way. Numerator/denominator
+# ratios and target thresholds are Phase 2.
+pcn_iif_for_icb <- function(practice_iif_indicators, pcn_native_iif_indicators, epcn_mapping, icb_code) {
+  practice_icb <- pcn_icb_lookup(epcn_mapping) |>
+    dplyr::filter(ICB_CODE == icb_code) |>
+    dplyr::distinct(PRACTICE_CODE, PCN_CODE, PCN_NAME)
+
+  aggregated <- practice_iif_indicators |>
+    dplyr::inner_join(practice_icb, by = "PRACTICE_CODE") |>
+    dplyr::group_by(PCN_CODE, PCN_NAME, IND_CODE, MEASURE) |>
+    dplyr::summarise(VALUE = sum(VALUE, na.rm = TRUE), .groups = "drop") |>
+    dplyr::mutate(source = "aggregated_from_practice")
+
   pcn_icb <- pcn_icb_lookup(epcn_mapping) |>
     dplyr::filter(ICB_CODE == icb_code) |>
     dplyr::distinct(PCN_CODE)
 
-  pcn_iif_indicators |>
+  native <- pcn_native_iif_indicators |>
     dplyr::inner_join(pcn_icb, by = "PCN_CODE") |>
-    dplyr::arrange(PCN_CODE, IND_CODE)
+    dplyr::select(PCN_CODE, PCN_NAME, IND_CODE, MEASURE, VALUE) |>
+    dplyr::mutate(source = "pcn_native_only")
+
+  dplyr::bind_rows(aggregated, native) |>
+    dplyr::arrange(PCN_CODE, IND_CODE, MEASURE)
 }
