@@ -1,0 +1,279 @@
+---
+title: "PRAQTIS diagnostic snapshot"
+format:
+  typst:
+    papersize: a4
+    margin:
+      x: 1.8cm
+      y: 1.6cm
+params:
+  pcn_code: "U06180" # North Southwark PCN — pilot test case
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+library(targets)
+library(dplyr)
+library(ggplot2)
+library(tibble)
+
+source_dir <- "../src"
+for (f in list.files(source_dir, full.names = TRUE)) source(f)
+
+# Reads pre-built pipeline outputs — run `targets::tar_make()` from the
+# project root before rendering this report. Nothing is recomputed here.
+store <- "../_targets"
+tr <- function(name) tar_read_raw(name, store = store)
+
+pilot_pcn_list_size <- tr("pilot_pcn_list_size")
+pilot_pcn_imd <- tr("pilot_pcn_imd")
+pilot_pcn_ros <- tr("pilot_pcn_ros")
+pilot_pcn_qof <- tr("pilot_pcn_qof")
+pilot_pcn_tpg <- tr("pilot_pcn_tpg")
+pilot_pcn_ppd <- tr("pilot_pcn_ppd")
+pilot_pcn_tpg_funnel <- tr("pilot_pcn_tpg_funnel")
+national_pcn_tpg_funnel_flags <- tr("national_pcn_tpg_funnel_flags")
+
+pcn_code <- params$pcn_code
+
+pcn_name <- filter(pilot_pcn_list_size, PCN_CODE == pcn_code)$PCN_NAME
+icb_name <- "NHS South East London Integrated Care Board"
+
+ros_row <- filter(pilot_pcn_ros, PCN_CODE == pcn_code)
+tpg_row <- filter(pilot_pcn_tpg, PCN_CODE == pcn_code)
+ppd_row <- filter(pilot_pcn_ppd, PCN_CODE == pcn_code)
+funnel_row <- filter(pilot_pcn_tpg_funnel, PCN_CODE == pcn_code)
+list_size_row <- filter(pilot_pcn_list_size, PCN_CODE == pcn_code)
+
+ros_rank <- pilot_pcn_ros |> arrange(desc(ros)) |> mutate(rank = row_number()) |>
+  filter(PCN_CODE == pcn_code) |> pull(rank)
+
+# Practice-level drill-down is only wired up for the pilot's one
+# investigated example so far (see src/lookup_practice.R) — shown only
+# when it applies to this PCN; a real Phase 3 build would generalise
+# this to "flag whichever practice diverges most from its PCN".
+practice_snapshot_row <- if (pcn_code == "U06180") tr("nexus_practice_snapshot") else NULL
+
+# Palette — dataviz skill's validated reference instance
+# (references/palette.md). Swap for a brand palette by changing these
+# constants only.
+col_accent <- "#2a78d6" # categorical slot 1 (blue)
+col_muted <- "#c3c2b7" # baseline/axis gray, used for de-emphasised bars
+col_ink_primary <- "#0b0b0b"
+col_ink_secondary <- "#52514e"
+col_ink_muted <- "#898781"
+col_gridline <- "#e1e0d9"
+col_good <- "#0ca30c"
+col_critical <- "#d03b3b"
+
+chart_theme <- theme_minimal(base_size = 9) +
+  theme(
+    text = element_text(colour = col_ink_secondary),
+    axis.text = element_text(colour = col_ink_muted, size = 7.5),
+    axis.title = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(colour = col_gridline, linewidth = 0.3),
+    plot.title = element_text(colour = col_ink_primary, size = 10, face = "bold"),
+    plot.subtitle = element_text(colour = col_ink_secondary, size = 8),
+    legend.position = "none"
+  )
+
+pct1 <- function(x) sprintf("%.1f%%", x)
+```
+
+# `{r} pcn_name`
+
+`{r} icb_name` &nbsp;·&nbsp; `{r} format(list_size_row$list_size, big.mark = ",")` registered patients &nbsp;·&nbsp; rendered `{r} format(Sys.Date())`
+
+::: {.callout-note appearance="simple"}
+**The headline finding:** PCNs that actually look like `{r} pcn_name` — similar
+size, deprivation, and disease burden — are hitting a median
+**`{r} pct1(ppd_row$peer_median_qof_achievement_pct)`** on QOF achievement.
+`{r} pcn_name` is at **`{r} pct1(ppd_row$own_qof_achievement_pct)`** — a
+**`{r} sprintf("%.1f", ppd_row$ppd)`-point gap** against the `{r} ppd_row$n_peers` PCNs
+nationally that face the closest thing to the same challenges (matched on list
+size, deprivation, and disease-register prevalence). This is a question worth
+asking, not a verdict — see *Limitations* for what this can and can't prove.
+:::
+
+## At a glance
+
+| Metric | This PCN | What it means |
+|---|---|---|
+| Recruitment Opportunity Score (ROS) | rank `{r} ros_rank` of `{r} nrow(pilot_pcn_ros)` in the pilot | How much patient need, weighted by deprivation, is outgrowing current staff — higher rank means a stronger case for the next ARRS hire |
+| Threshold Proximity Gap (TPG) — ACC-08 | `{r} pct1(tpg_row$performance_pct)` (`{r} sprintf("%.0f%%", tpg_row$achievement_points_pct)` of available points) | Appointments booked within two weeks, against the 85%/90% national IIF thresholds |
+| Funnel-plot check | `{r} gsub("_", " ", funnel_row$funnel_flag)` | Whether that ACC-08 rate is statistically unusual once PCN size is accounted for |
+
+## Staffing pressure across the ICB (ROS)
+
+```{r}
+#| label: fig-ros
+#| echo: false
+#| fig-width: 6.4
+#| fig-height: 3.6
+#| fig-cap: !expr paste0(pcn_name, " ranks ", ros_rank, " of ", nrow(pilot_pcn_ros), " pilot PCNs on recruitment need — highest ROS marks the strongest case for the next ARRS hire.")
+
+ros_plot_data <- pilot_pcn_ros |>
+  mutate(
+    is_this_pcn = PCN_CODE == pcn_code,
+    PCN_NAME = factor(PCN_NAME, levels = rev(PCN_NAME[order(ros)]))
+  )
+
+label_data <- filter(ros_plot_data, is_this_pcn)
+
+ggplot(ros_plot_data, aes(x = PCN_NAME, y = ros, fill = is_this_pcn)) +
+  geom_col(width = 0.72) +
+  geom_text(
+    data = label_data, aes(label = paste0(pcn_name, ": ", round(ros))),
+    hjust = -0.08, size = 2.6, colour = col_ink_primary, fontface = "bold"
+  ) +
+  scale_fill_manual(values = c(`TRUE` = col_accent, `FALSE` = col_muted)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.28))) +
+  coord_flip() +
+  chart_theme +
+  theme(axis.text.y = element_blank())
+```
+
+# Threshold and outlier check
+
+## ACC-08: appointments booked within two weeks (TPG)
+
+```{r}
+#| label: fig-tpg-meter
+#| echo: false
+#| fig-width: 6.4
+#| fig-height: 1.15
+#| fig-cap: !expr paste0(pcn_name, " sits at ", pct1(tpg_row$performance_pct), " against the 85% (zero points) / 90% (full points) IIF thresholds.")
+
+meter_df <- tibble(x0 = 0, x1 = 100)
+
+ggplot() +
+  geom_segment(
+    data = meter_df, aes(x = x0, xend = x1, y = 0, yend = 0),
+    colour = col_gridline, linewidth = 6, lineend = "round"
+  ) +
+  geom_segment(
+    aes(x = 0, xend = tpg_row$performance_pct, y = 0, yend = 0),
+    colour = col_accent, linewidth = 6, lineend = "round"
+  ) +
+  geom_vline(xintercept = 85, colour = col_ink_muted, linetype = "dashed", linewidth = 0.4) +
+  geom_vline(xintercept = 90, colour = col_ink_muted, linetype = "dashed", linewidth = 0.4) +
+  annotate("text", x = 83.5, y = 0.55, label = "85% (LT)", size = 2.4, colour = col_ink_muted, hjust = 1) +
+  annotate("text", x = 91.5, y = 0.55, label = "90% (UT)", size = 2.4, colour = col_ink_muted, hjust = 0) +
+  annotate(
+    "text", x = tpg_row$performance_pct, y = -0.55,
+    label = pct1(tpg_row$performance_pct), size = 3, colour = col_ink_primary, fontface = "bold"
+  ) +
+  scale_x_continuous(limits = c(0, 100), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(-1, 1)) +
+  chart_theme +
+  theme(
+    axis.text = element_blank(), panel.grid = element_blank(),
+    axis.ticks = element_blank()
+  )
+```
+
+## National funnel-plot check
+
+```{r}
+#| label: fig-funnel
+#| echo: false
+#| fig-width: 6.4
+#| fig-height: 3.4
+#| fig-cap: !expr paste0("ACC-08 performance vs. appointment volume across all ", nrow(national_pcn_tpg_funnel_flags), " PCNs nationally (Spiegelhalter overdispersion-adjusted control limits). ", pcn_name, " marked in blue.")
+
+funnel_data <- national_pcn_tpg_funnel_flags |>
+  mutate(is_this_pcn = PCN_CODE == pcn_code)
+
+this_row <- filter(funnel_data, is_this_pcn)
+
+# Flip label alignment depending on which half of the (log) x-range the
+# highlighted point falls in, so the direct label never runs off the
+# panel edge regardless of which PCN this report is parameterised for.
+x_mid_log <- mean(log10(range(funnel_data$denominator)))
+label_hjust <- if (log10(this_row$denominator) > x_mid_log) 1.1 else -0.1
+
+ggplot(funnel_data, aes(x = denominator, y = performance_pct)) +
+  geom_hline(yintercept = this_row$od95_lower_pct, colour = col_ink_muted, linetype = "dashed", linewidth = 0.3) +
+  geom_hline(yintercept = this_row$od95_upper_pct, colour = col_ink_muted, linetype = "dashed", linewidth = 0.3) +
+  geom_hline(yintercept = this_row$od99_8_lower_pct, colour = col_ink_muted, linetype = "dotted", linewidth = 0.3) +
+  geom_hline(yintercept = this_row$od99_8_upper_pct, colour = col_ink_muted, linetype = "dotted", linewidth = 0.3) +
+  geom_point(aes(colour = is_this_pcn, size = is_this_pcn), alpha = 0.7) +
+  geom_text(
+    data = this_row, aes(label = pcn_name),
+    hjust = label_hjust, size = 2.8, colour = col_ink_primary, fontface = "bold"
+  ) +
+  scale_colour_manual(values = c(`TRUE` = col_accent, `FALSE` = col_muted)) +
+  scale_size_manual(values = c(`TRUE` = 2.6, `FALSE` = 1)) +
+  scale_x_log10(
+    labels = scales::label_number(scale_cut = scales::cut_short_scale()),
+    expand = expansion(mult = c(0.12, 0.12))
+  ) +
+  chart_theme +
+  theme(axis.text = element_text(colour = col_ink_muted, size = 7.5))
+```
+
+Dashed lines mark the 95% control band, dotted lines the 99.8% band — both
+computed nationally, not just within the pilot ICB. Bands stay near-constant
+width across volume because, at these appointment counts, real between-PCN
+variation dominates sampling noise — see `dat/in/MANIFEST.md`.
+
+```{r}
+#| label: practice-drilldown
+#| echo: false
+#| output: asis
+
+if (!is.null(practice_snapshot_row)) {
+  cat("\n# Practice drill-down\n\n")
+  cat(sprintf(
+    "%s makes up %s%% of %s's list, and is running ahead of the network on appointment access:\n\n",
+    practice_snapshot_row$PRACTICE_NAME,
+    round(100 * practice_snapshot_row$list_size / list_size_row$list_size),
+    pcn_name
+  ))
+  cat(sprintf(
+    "| Metric | %s | %s (network) | Gap |\n|---|---|---|---|\n",
+    practice_snapshot_row$PRACTICE_NAME, pcn_name
+  ))
+  cat(sprintf(
+    "| QOF achievement | %s | %s | %+.1fpt |\n",
+    pct1(practice_snapshot_row$qof_achievement_pct),
+    pct1(practice_snapshot_row$pcn_qof_achievement_pct),
+    practice_snapshot_row$qof_gap_vs_pcn
+  ))
+  cat(sprintf(
+    "| ACC-08 (booked \\<= 2wk) | %s | %s | %+.1fpt |\n",
+    pct1(practice_snapshot_row$acc08_performance_pct),
+    pct1(practice_snapshot_row$pcn_acc08_performance_pct),
+    practice_snapshot_row$acc08_gap_vs_pcn
+  ))
+  cat(sprintf(
+    "\nThis is data, not diagnosis — the honest next step is a conversation with %s about what's different, not more analysis.\n",
+    practice_snapshot_row$PRACTICE_NAME
+  ))
+}
+```
+
+# Limitations
+
+- **This is a question, not a verdict.** Every gap above is worth a
+  conversation, not a conclusion — case-mix, coding practice, and local
+  context all vary in ways this data doesn't capture.
+- **TPG covers ACC-08 only.** Of the four IIF indicator codes in the
+  underlying data, only ACC-08 is confirmed against NHS England's official
+  2023/24 IIF guidance; three others in the same NHS Digital release belong
+  to a different, unidentified scheme and are excluded rather than guessed
+  at (see `src/compute_tpg.R`).
+- **PPD's peer group is our own construction**, replicating NHS England's
+  published CCG-similarity method — not an official government comparator.
+- **No per-PCN £ figure for ARRS spend or underspend exists publicly**
+  below ICB level — nothing here should be read as a costed claim.
+- **QOF disease-register prevalence** (used to build the peer group) is a
+  relative similarity index across 21 conditions, not a clinical prevalence
+  rate — it double-counts multimorbid patients by design.
+- **DNA (Did Not Attend) rates are not yet in this pipeline** — CLAUDE.md's
+  Phase 3 spec calls for a DNA benchmark and it isn't here yet.
+- **This report is a first draft**, rendered against one pilot PCN as a
+  test case. Page count, layout, and section order are all still open.

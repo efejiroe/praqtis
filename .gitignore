@@ -6,3 +6,5 @@
 ref/
 dat/out/
 _targets/
+report/.quarto/
+report/*.pdf
