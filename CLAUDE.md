@@ -30,6 +30,7 @@ Following the following roadmap (phased build — do not start a phase before th
 * Record every public-data file's source URL, download date and vintage in dat/in/MANIFEST.md
 * Verify data availability empirically before building around it — do not assume a geography or metric is available without checking
 * Write report findings as questions, not verdicts; state costs as order-of-magnitude with caveats named alongside
+* Every statistical method or metric must reduce to a one-sentence, jargon-free explanation a PCN manager could repeat back — if it can't be explained that simply, it's the wrong metric for the report, however sound the statistics
 * Never present ARRS spend or underspend as a per-PCN £ figure — no public source publishes it below ICB level; national/ICB context only (see ref/CONCEPT.md)
 * Public, aggregate data only — never introduce patient-level data
 * Aggregate to PCN level before flagging any outlier
