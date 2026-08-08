@@ -66,8 +66,8 @@ list(
   tar_target(pilot_pcn_qof, filter_pcn_icb(national_pcn_qof, pilot_icb_code)),
   tar_target(pilot_pcn_iif, filter_pcn_icb(national_pcn_iif, pilot_icb_code)),
 
-  # Phase 2 — score. TPG isn't built yet: it needs target thresholds
-  # from QOF/IIF guidance PDFs, not a data file.
+  # Phase 2 — score. TPG leads with IIF only for now (see compute_tpg.R
+  # for which indicators that covers and why) — expandable to QOF later.
   tar_target(
     pilot_pcn_ros,
     pcn_ros(pilot_pcn_list_size, pilot_pcn_imd, pilot_pcn_workforce)
@@ -81,5 +81,9 @@ list(
     pcn_ppd_for_pcns(
       national_features, national_pcn_qof, pilot_pcn_list_size$PCN_CODE, k = 10
     )
+  ),
+  tar_target(
+    pilot_pcn_tpg,
+    filter_pcn_icb(pcn_tpg(national_pcn_iif), pilot_icb_code)
   )
 )
