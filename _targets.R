@@ -1,6 +1,6 @@
 library(targets)
 
-tar_option_set(packages = c("readr", "dplyr", "readxl", "fingertipsR", "tibble"))
+tar_option_set(packages = c("readr", "dplyr", "readxl", "fingertipsR", "tibble", "FunnelPlotR"))
 
 for (f in list.files("src", full.names = TRUE)) source(f)
 
@@ -85,5 +85,13 @@ list(
   tar_target(
     pilot_pcn_tpg,
     filter_pcn_icb(pcn_tpg(national_pcn_iif), pilot_icb_code)
+  ),
+  tar_target(
+    national_pcn_tpg_funnel_flags,
+    national_pcn_tpg_funnel(national_pcn_iif)
+  ),
+  tar_target(
+    pilot_pcn_tpg_funnel,
+    filter_pcn_icb(national_pcn_tpg_funnel_flags, pilot_icb_code)
   )
 )
