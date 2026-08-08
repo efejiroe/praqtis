@@ -93,5 +93,20 @@ list(
   tar_target(
     pilot_pcn_tpg_funnel,
     filter_pcn_icb(national_pcn_tpg_funnel_flags, pilot_icb_code)
+  ),
+
+  # Practice drill-down example — Nexus Health Group, North Southwark
+  # PCN, surfaced while investigating that PCN's PPD gap. Registered as
+  # a target (not just an interactive query) so it's reproducible and
+  # available to the Phase 3 report.
+  tar_target(
+    nexus_practice_snapshot,
+    practice_vs_pcn(
+      practice_snapshot(
+        "G85034", practice_registration, practice_imd, practice_gp_workforce,
+        qof_practice_achievement, practice_iif_indicators, epcn_mapping
+      ),
+      pilot_pcn_qof, pilot_pcn_tpg
+    )
   )
 )
