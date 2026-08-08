@@ -42,5 +42,13 @@ list(
     pcn_iif_for_icb(
       practice_iif_indicators, pcn_native_iif_indicators, epcn_mapping, pilot_icb_code
     )
+  ),
+
+  # Phase 2 — score (still no PPD/TPG here: PPD needs a national peer
+  # group, TPG needs target thresholds from guidance PDFs — see
+  # CLAUDE.md roadmap)
+  tar_target(
+    pilot_pcn_ros,
+    pcn_ros(pilot_pcn_list_size, pilot_pcn_imd, pilot_pcn_workforce)
   )
 )
