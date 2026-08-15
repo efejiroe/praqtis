@@ -1,4 +1,4 @@
-# Aggregate each raw data source to PCN level, nationally — no ROS/TPG
+# Aggregate each raw data source to PCN level, nationally — no ROS
 # scoring here (that's compute_ros.R and Phase 2 more broadly); this is
 # just fetch-and-pool-to-PCN. Built at national scale, not pre-filtered
 # to one ICB, because PPD's peer group (compute_ppd.R) needs every PCN
@@ -155,28 +155,4 @@ pcn_qof <- function(qof_practice_achievement, epcn_mapping, primary_icb) {
     ) |>
     dplyr::inner_join(dplyr::select(primary_icb, PCN_CODE, ICB_CODE), by = "PCN_CODE") |>
     dplyr::arrange(PCN_CODE)
-}
-
-# Indicators available at practice level (see fetch_iif.R) are summed to
-# PCN ourselves; the age-sex-standardised indicators that are only ever
-# published at PCN level are used as-is — `source` marks which is which,
-# rather than silently treating both the same way. Numerator/denominator
-# ratios and target thresholds are Phase 2.
-pcn_iif <- function(practice_iif_indicators, pcn_native_iif_indicators, epcn_mapping, primary_icb) {
-  practice_icb <- pcn_icb_lookup(epcn_mapping) |>
-    dplyr::distinct(PRACTICE_CODE, PCN_CODE, PCN_NAME)
-
-  aggregated <- practice_iif_indicators |>
-    dplyr::inner_join(practice_icb, by = "PRACTICE_CODE") |>
-    dplyr::group_by(PCN_CODE, PCN_NAME, IND_CODE, MEASURE) |>
-    dplyr::summarise(VALUE = sum(VALUE, na.rm = TRUE), .groups = "drop") |>
-    dplyr::mutate(source = "aggregated_from_practice")
-
-  native <- pcn_native_iif_indicators |>
-    dplyr::select(PCN_CODE, PCN_NAME, IND_CODE, MEASURE, VALUE) |>
-    dplyr::mutate(source = "pcn_native_only")
-
-  dplyr::bind_rows(aggregated, native) |>
-    dplyr::inner_join(dplyr::select(primary_icb, PCN_CODE, ICB_CODE), by = "PCN_CODE") |>
-    dplyr::arrange(PCN_CODE, IND_CODE, MEASURE)
 }

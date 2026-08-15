@@ -28,9 +28,8 @@ pcn_ros <- function(pcn_list_size, pcn_imd, pcn_workforce) {
     dplyr::arrange(dplyr::desc(ros))
 }
 
-# Funnel-plot outlier flagging on ROS's own staffing ratio — same
-# Spiegelhalter method (via FunnelPlotR) already used for TPG in
-# compute_funnel.R, applied here so a PCN is identified because its
+# Funnel-plot outlier flagging on ROS's own staffing ratio — Spiegelhalter
+# method via FunnelPlotR, applied so a PCN is identified because its
 # staffing is a statistical outlier against its own patient need, not
 # just because it happens to rank highest in the pilot.
 #
@@ -44,7 +43,7 @@ pcn_ros <- function(pcn_list_size, pcn_imd, pcn_workforce) {
 # stated here as an assumption, not fact, per CLAUDE.md.
 #
 # Run at national scale, not just the pilot ICB, for the same reason as
-# TPG's funnel and PPD's peer group: control limits have to reflect the
+# PPD's peer group: control limits have to reflect the
 # true national spread of staffing intensity.
 national_pcn_ros_funnel <- function(national_pcn_list_size, national_pcn_imd, national_pcn_workforce) {
   ros <- pcn_ros(national_pcn_list_size, national_pcn_imd, national_pcn_workforce) |>

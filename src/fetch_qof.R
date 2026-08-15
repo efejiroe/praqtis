@@ -1,7 +1,5 @@
 # QOF (Quality and Outcomes Framework) 2024-25, practice-level overall
-# achievement. TPG's primary source (see ref/CONCEPT.md) — QOF is the
-# stable, well-populated indicator set; IIF is a minor supplement
-# (fetch_iif.R) since it's been slimmed to 2 indicators for 2024/25.
+# achievement (see ref/CONCEPT.md) — used as PPD's peer-comparison metric.
 
 fetch_qof_practice_achievement <- function(dest_dir = "dat/in") {
   dir.create(dest_dir, showWarnings = FALSE, recursive = TRUE)

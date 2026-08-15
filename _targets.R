@@ -18,8 +18,6 @@ list(
   tar_target(pcn_arrs_workforce, fetch_pcn_arrs_workforce()),
   tar_target(qof_practice_achievement, fetch_qof_practice_achievement()),
   tar_target(qof_practice_prevalence, fetch_qof_practice_prevalence()),
-  tar_target(practice_iif_indicators, fetch_practice_iif_indicators()),
-  tar_target(pcn_native_iif_indicators, fetch_pcn_native_iif_indicators()),
 
   # Aggregate to PCN, nationally (no modelling yet) — needed at national
   # scale because PPD's peer group has to search all of England, not
@@ -52,22 +50,16 @@ list(
     national_pcn_qof,
     pcn_qof(qof_practice_achievement, epcn_mapping, national_pcn_primary_icb)
   ),
-  tar_target(
-    national_pcn_iif,
-    pcn_iif(
-      practice_iif_indicators, pcn_native_iif_indicators, epcn_mapping, national_pcn_primary_icb
-    )
-  ),
 
   # Pilot ICB view — thin filter of the national tables
   tar_target(pilot_pcn_list_size, filter_pcn_icb(national_pcn_list_size, pilot_icb_code)),
   tar_target(pilot_pcn_imd, filter_pcn_icb(national_pcn_imd, pilot_icb_code)),
   tar_target(pilot_pcn_workforce, filter_pcn_icb(national_pcn_workforce, pilot_icb_code)),
   tar_target(pilot_pcn_qof, filter_pcn_icb(national_pcn_qof, pilot_icb_code)),
-  tar_target(pilot_pcn_iif, filter_pcn_icb(national_pcn_iif, pilot_icb_code)),
 
-  # Phase 2 — score. TPG leads with IIF only for now (see compute_tpg.R
-  # for which indicators that covers and why) — expandable to QOF later.
+  # Phase 2 — score. ROS is the lead metric, checked for statistical
+  # outliers via a national funnel plot (see compute_ros.R); PPD is the
+  # corroborating peer-group signal.
   tar_target(
     pilot_pcn_ros,
     pcn_ros(pilot_pcn_list_size, pilot_pcn_imd, pilot_pcn_workforce)
@@ -90,18 +82,6 @@ list(
       national_features, national_pcn_qof, pilot_pcn_list_size$PCN_CODE, k = 10
     )
   ),
-  tar_target(
-    pilot_pcn_tpg,
-    filter_pcn_icb(pcn_tpg(national_pcn_iif), pilot_icb_code)
-  ),
-  tar_target(
-    national_pcn_tpg_funnel_flags,
-    national_pcn_tpg_funnel(national_pcn_iif)
-  ),
-  tar_target(
-    pilot_pcn_tpg_funnel,
-    filter_pcn_icb(national_pcn_tpg_funnel_flags, pilot_icb_code)
-  ),
 
   # Practice drill-down example — Nexus Health Group, North Southwark
   # PCN, surfaced while investigating that PCN's PPD gap. Registered as
@@ -112,9 +92,9 @@ list(
     practice_vs_pcn(
       practice_snapshot(
         "G85034", practice_registration, practice_imd, practice_gp_workforce,
-        qof_practice_achievement, practice_iif_indicators, epcn_mapping
+        qof_practice_achievement, epcn_mapping
       ),
-      pilot_pcn_qof, pilot_pcn_tpg, pilot_pcn_workforce, pilot_pcn_list_size
+      pilot_pcn_qof, pilot_pcn_workforce, pilot_pcn_list_size
     )
   )
 )

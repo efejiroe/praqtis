@@ -34,14 +34,6 @@ pilot_pcn_qof <- tr("pilot_pcn_qof")
 pilot_pcn_ppd <- tr("pilot_pcn_ppd")
 national_pcn_ros_funnel_flags <- tr("national_pcn_ros_funnel_flags")
 
-# TPG/IIF (ACC-08) and its funnel-plot check are computed in the
-# pipeline (compute_tpg.R, compute_funnel.R) but not surfaced in this
-# report — direction is to lead on ARRS/ROS as the one metric; IIF was
-# assessed as noise for a cold-pitch artefact. Practice-level ACC-08
-# fields are still present on nexus_practice_snapshot below since that
-# target isn't rebuilt for this report-only change; they're simply not
-# read out here.
-
 pcn_code <- params$pcn_code
 
 pcn_name <- filter(pilot_pcn_list_size, PCN_CODE == pcn_code)$PCN_NAME
@@ -53,8 +45,7 @@ list_size_row <- filter(pilot_pcn_list_size, PCN_CODE == pcn_code)
 
 # Read from the national table (not a pilot-filtered one) since the
 # funnel chart below has to plot the full national spread for its
-# control limits to mean anything — same reasoning as TPG's funnel
-# check and PPD's peer group.
+# control limits to mean anything — same reasoning as PPD's peer group.
 ros_funnel_row <- filter(national_pcn_ros_funnel_flags, PCN_CODE == pcn_code)
 
 # The headline claim a PCN is identified because its staffing is a
@@ -75,11 +66,6 @@ ros_flag_sentence <- dplyr::case_when(
   TRUE ~
     "That's actually above what's expected given its patient population — the opposite direction, worth understanding before assuming a staffing gap here."
 )
-
-# src/lookup_practice.R's practice-level drill-down (nexus_practice_snapshot)
-# is IIF/ACC-08-led and isn't read into this report — direction is to
-# lead on ARRS/ROS as the one metric; see the note on the TPG/funnel
-# targets above.
 
 # Palette — dataviz skill's validated reference instance
 # (references/palette.md). Swap for a brand palette by changing these
@@ -220,9 +206,5 @@ peer-group comparison can and can't prove.
   rate — it double-counts multimorbid patients by design.
 - **DNA (Did Not Attend) rates are not yet in this pipeline** — CLAUDE.md's
   Phase 3 spec calls for a DNA benchmark and it isn't here yet.
-- **TPG/IIF is computed in the pipeline but not shown here** — direction is
-  to lead on one metric (ARRS/ROS); IIF was assessed as noise for a
-  cold-pitch artefact. `src/compute_tpg.R` and `src/compute_funnel.R` are
-  unchanged and available if that changes.
 - **This report is a first draft**, rendered against one pilot PCN as a
   test case. Page count, layout, and section order are all still open.

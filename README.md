@@ -14,9 +14,9 @@ pipeline.
 
 Phased build (see `CLAUDE.md` for the full roadmap and constraints).
 Phase 0 (data-availability reconnaissance), Phase 1 (single-PCN
-fetch/aggregate pipeline), and Phase 2 (scoring — ROS, TPG, PPD,
-funnel-plot flagging) are complete. Phase 3 (parameterised Quarto
-report) has a first draft in progress.
+fetch/aggregate pipeline), and Phase 2 (scoring — ROS, PPD, national
+funnel-plot outlier flagging on ROS) are complete. Phase 3
+(parameterised Quarto report) has a first draft in progress.
 
 ## Features
 
@@ -27,16 +27,17 @@ report) has a first draft in progress.
 - **Recruitment Opportunity Score (ROS)** — flags where patient need,
   weighted by deprivation, is outgrowing current staffing, to direct
   the next ARRS hire.
-- **Threshold Proximity Gap (TPG)** — the gap between a PCN's current
-  performance and the funding threshold it's currently missing.
+- **Funnel-plot outlier flagging on ROS** — Spiegelhalter's
+  overdispersion-adjusted method (via `FunnelPlotR`), run nationally so
+  a PCN is identified because its staffing is a statistical outlier
+  against expected need, not just because it tops a ranking; control
+  limits reflect the true national spread, so small PCNs aren't flagged
+  just for being small and noisy.
 - **Peer Performance Deficit (PPD)** — benchmarks a PCN against a
   nationally-built "like-PCN" peer group (nearest-neighbour clustering
   on list size, deprivation, and disease prevalence), not the national
-  average, which flattens very different PCNs into one number.
-- **Funnel-plot outlier flagging** — Spiegelhalter's overdispersion-
-  adjusted method (via `FunnelPlotR`), run nationally so control limits
-  reflect the true spread of PCN performance and small PCNs aren't
-  flagged just for being small and noisy.
+  average, which flattens very different PCNs into one number. Serves
+  as a second, corroborating signal alongside the ROS funnel.
 - **Practice-level drill-down** (`src/lookup_practice.R`) — once a PCN-
   level gap is worth investigating, `practice_snapshot()` and
   `practice_vs_pcn()` pull a single practice's own numbers and compare
