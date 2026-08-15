@@ -73,6 +73,14 @@ list(
     pcn_ros(pilot_pcn_list_size, pilot_pcn_imd, pilot_pcn_workforce)
   ),
   tar_target(
+    national_pcn_ros_funnel_flags,
+    national_pcn_ros_funnel(national_pcn_list_size, national_pcn_imd, national_pcn_workforce)
+  ),
+  tar_target(
+    pilot_pcn_ros_funnel,
+    filter_pcn_icb(national_pcn_ros_funnel_flags, pilot_icb_code)
+  ),
+  tar_target(
     national_features,
     national_pcn_features(national_pcn_list_size, national_pcn_imd, national_pcn_prevalence)
   ),
@@ -106,7 +114,7 @@ list(
         "G85034", practice_registration, practice_imd, practice_gp_workforce,
         qof_practice_achievement, practice_iif_indicators, epcn_mapping
       ),
-      pilot_pcn_qof, pilot_pcn_tpg
+      pilot_pcn_qof, pilot_pcn_tpg, pilot_pcn_workforce, pilot_pcn_list_size
     )
   )
 )

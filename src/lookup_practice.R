@@ -51,19 +51,34 @@ practice_snapshot <- function(practice_code, practice_registration, practice_imd
   )
 }
 
-# Attaches the practice's own PCN's QOF/ACC-08 figures and the gap
-# between them, so a report can say "this practice vs. its network"
-# without a second manual lookup.
-practice_vs_pcn <- function(snapshot, pcn_qof, pcn_tpg) {
+# Attaches the practice's own PCN's QOF/ACC-08 figures, the gap between
+# them, and — critically — whether the practice is simply better-staffed
+# than the rest of its network. A performance gap with a matching
+# staffing gap is a resourcing story ("they have more people"); a
+# performance gap with near-identical staffing intensity is a process
+# story (the same resources doing something differently) — the second
+# is the zero-extra-capacity finding worth leading a report with, and
+# the first isn't, so this has to be checked before either framing is
+# used, not assumed.
+practice_vs_pcn <- function(snapshot, pcn_qof, pcn_tpg, pcn_workforce, pcn_list_size) {
   pcn_code <- snapshot$PCN_CODE
   pcn_qof_pct <- dplyr::filter(pcn_qof, PCN_CODE == pcn_code)$qof_achievement_pct
   pcn_acc08_pct <- dplyr::filter(pcn_tpg, PCN_CODE == pcn_code)$performance_pct
+  pcn_fte <- dplyr::filter(pcn_workforce, PCN_CODE == pcn_code)$practice_fte
+  pcn_list <- dplyr::filter(pcn_list_size, PCN_CODE == pcn_code)$list_size
+
+  rest_of_pcn_fte <- pcn_fte - snapshot$practice_fte
+  rest_of_pcn_list_size <- pcn_list - snapshot$list_size
 
   snapshot |>
     dplyr::mutate(
       pcn_qof_achievement_pct = pcn_qof_pct,
       pcn_acc08_performance_pct = pcn_acc08_pct,
       qof_gap_vs_pcn = qof_achievement_pct - pcn_qof_pct,
-      acc08_gap_vs_pcn = acc08_performance_pct - pcn_acc08_pct
+      acc08_gap_vs_pcn = acc08_performance_pct - pcn_acc08_pct,
+      practice_fte_per_1k_patients = 1000 * practice_fte / list_size,
+      rest_of_pcn_fte_per_1k_patients = 1000 * rest_of_pcn_fte / rest_of_pcn_list_size,
+      staffing_intensity_gap_pct = 100 * (practice_fte_per_1k_patients - rest_of_pcn_fte_per_1k_patients) /
+        rest_of_pcn_fte_per_1k_patients
     )
 }

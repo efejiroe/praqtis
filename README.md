@@ -13,9 +13,10 @@ pipeline.
 ## Status
 
 Phased build (see `CLAUDE.md` for the full roadmap and constraints).
-Phase 0 (data-availability reconnaissance) and Phase 1 (single-PCN
-fetch/aggregate pipeline) are complete. Phase 2 (scoring) is in
-progress.
+Phase 0 (data-availability reconnaissance), Phase 1 (single-PCN
+fetch/aggregate pipeline), and Phase 2 (scoring — ROS, TPG, PPD,
+funnel-plot flagging) are complete. Phase 3 (parameterised Quarto
+report) has a first draft in progress.
 
 ## Features
 
