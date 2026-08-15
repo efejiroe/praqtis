@@ -1,9 +1,9 @@
 # Aggregate each raw data source to PCN level, nationally — no ROS
-# scoring here (that's compute_ros.R and Phase 2 more broadly); this is
-# just fetch-and-pool-to-PCN. Built at national scale, not pre-filtered
-# to one ICB, because PPD's peer group (compute_ppd.R) needs every PCN
-# in England to find genuine neighbours — filter_pcn_icb() below is the
-# thin final step for pilot-ICB-only views.
+# scoring here (that's compute_ros.R); this is just fetch-and-pool-to-PCN.
+# Built at national scale, not pre-filtered to one ICB, because the ROS
+# funnel plot's control limits need every PCN in England to reflect the
+# true national spread — filter_pcn_icb() below is the thin final step
+# for ICB-only views, if one is ever needed.
 #
 # ICBs are matched by ICB_CODE, not ICB_NAME — NHS Digital publications
 # don't agree on the name string (the ePCN mapping says "NHS South East
@@ -85,36 +85,6 @@ pcn_imd <- function(practice_imd, practice_registration, epcn_mapping, primary_i
     dplyr::arrange(PCN_CODE)
 }
 
-# List-size-weighted mean prevalence rate per PCN, averaged across QOF's
-# 21 chronic-disease registers (see fetch_qof.R). This double-counts
-# multimorbid patients across registers, so it isn't a clinical
-# prevalence % — it's a relative "how much registered chronic illness
-# does this population carry" index, used only to compare PCNs against
-# each other for the peer group (compute_ppd.R), never published as a
-# standalone figure.
-pcn_prevalence <- function(qof_practice_prevalence, practice_registration, epcn_mapping, primary_icb) {
-  practice_list_size <- practice_registration |>
-    dplyr::filter(SEX == "ALL", AGE_GROUP_5 == "ALL") |>
-    dplyr::select(PRACTICE_CODE = ORG_CODE, list_size = NUMBER_OF_PATIENTS)
-
-  practice_index <- qof_practice_prevalence |>
-    dplyr::mutate(rate = REGISTER / PRACTICE_LIST_SIZE) |>
-    dplyr::group_by(PRACTICE_CODE) |>
-    dplyr::summarise(prevalence_index = mean(rate, na.rm = TRUE), .groups = "drop")
-
-  pcn_icb_lookup(epcn_mapping) |>
-    dplyr::distinct(PRACTICE_CODE, PCN_CODE, PCN_NAME) |>
-    dplyr::inner_join(practice_index, by = "PRACTICE_CODE") |>
-    dplyr::inner_join(practice_list_size, by = "PRACTICE_CODE") |>
-    dplyr::group_by(PCN_CODE, PCN_NAME) |>
-    dplyr::summarise(
-      prevalence_index = stats::weighted.mean(prevalence_index, list_size, na.rm = TRUE),
-      .groups = "drop"
-    ) |>
-    dplyr::inner_join(dplyr::select(primary_icb, PCN_CODE, ICB_CODE), by = "PCN_CODE") |>
-    dplyr::arrange(PCN_CODE)
-}
-
 # Practice-level GP+DPC FTE summed to PCN, alongside PCN-employed (mostly
 # ARRS) FTE — the two raw ingredients of the ROS denominator, not yet
 # combined into ROS itself.
@@ -129,29 +99,6 @@ pcn_workforce <- function(practice_gp_workforce, pcn_arrs_workforce, epcn_mappin
     dplyr::left_join(
       dplyr::select(pcn_arrs_workforce, PCN_CODE, arrs_fte),
       by = "PCN_CODE"
-    ) |>
-    dplyr::inner_join(dplyr::select(primary_icb, PCN_CODE, ICB_CODE), by = "PCN_CODE") |>
-    dplyr::arrange(PCN_CODE)
-}
-
-# List-size-weighted mean QOF overall achievement % per PCN.
-pcn_qof <- function(qof_practice_achievement, epcn_mapping, primary_icb) {
-  practice_icb <- pcn_icb_lookup(epcn_mapping) |>
-    dplyr::distinct(PRACTICE_CODE, PCN_CODE, PCN_NAME)
-
-  # QOF's own embedded PCN_CODE/PCN_NAME reflect the 2024-25 QOF vintage,
-  # which can be a year+ stale vs the current ePCN mapping (practices do
-  # get reassigned between PCNs) — drop them and use the mapping's
-  # current attribution instead, so every metric agrees on what a PCN is.
-  qof_practice_achievement |>
-    dplyr::select(-PCN_CODE, -PCN_NAME) |>
-    dplyr::inner_join(practice_icb, by = "PRACTICE_CODE") |>
-    dplyr::group_by(PCN_CODE, PCN_NAME) |>
-    dplyr::summarise(
-      qof_achievement_pct = stats::weighted.mean(
-        qof_achievement_pct_2425, list_size_2425, na.rm = TRUE
-      ),
-      .groups = "drop"
     ) |>
     dplyr::inner_join(dplyr::select(primary_icb, PCN_CODE, ICB_CODE), by = "PCN_CODE") |>
     dplyr::arrange(PCN_CODE)

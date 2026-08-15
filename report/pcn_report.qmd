@@ -27,25 +27,18 @@ for (f in list.files(source_dir, full.names = TRUE)) source(f)
 store <- "../_targets"
 tr <- function(name) tar_read_raw(name, store = store)
 
-pilot_pcn_list_size <- tr("pilot_pcn_list_size")
-pilot_pcn_imd <- tr("pilot_pcn_imd")
-pilot_pcn_ros <- tr("pilot_pcn_ros")
-pilot_pcn_qof <- tr("pilot_pcn_qof")
-pilot_pcn_ppd <- tr("pilot_pcn_ppd")
+national_pcn_list_size <- tr("national_pcn_list_size")
+national_pcn_primary_icb <- tr("national_pcn_primary_icb")
+national_pcn_workforce <- tr("national_pcn_workforce")
 national_pcn_ros_funnel_flags <- tr("national_pcn_ros_funnel_flags")
 
 pcn_code <- params$pcn_code
 
-pcn_name <- filter(pilot_pcn_list_size, PCN_CODE == pcn_code)$PCN_NAME
-icb_name <- "NHS South East London Integrated Care Board"
+pcn_name <- filter(national_pcn_list_size, PCN_CODE == pcn_code)$PCN_NAME
+icb_name <- filter(national_pcn_primary_icb, PCN_CODE == pcn_code)$ICB_NAME
 
-ros_row <- filter(pilot_pcn_ros, PCN_CODE == pcn_code)
-ppd_row <- filter(pilot_pcn_ppd, PCN_CODE == pcn_code)
-list_size_row <- filter(pilot_pcn_list_size, PCN_CODE == pcn_code)
-
-# Read from the national table (not a pilot-filtered one) since the
-# funnel chart below has to plot the full national spread for its
-# control limits to mean anything — same reasoning as PPD's peer group.
+list_size_row <- filter(national_pcn_list_size, PCN_CODE == pcn_code)
+workforce_row <- filter(national_pcn_workforce, PCN_CODE == pcn_code)
 ros_funnel_row <- filter(national_pcn_ros_funnel_flags, PCN_CODE == pcn_code)
 
 # The headline claim a PCN is identified because its staffing is a
@@ -57,12 +50,12 @@ ros_funnel_row <- filter(national_pcn_ros_funnel_flags, PCN_CODE == pcn_code)
 ros_flag_sentence <- dplyr::case_when(
   ros_funnel_row$funnel_flag == "outside_99.8pct" &
     ros_funnel_row$direction == "understaffed_vs_expected" ~
-    "That gap is large enough to sit outside the 99.8% range — the strongest, most statistically defensible case in the pilot for the next ARRS hire.",
+    "That gap is large enough to sit outside the 99.8% range — the strongest, most statistically defensible case for the next ARRS hire.",
   ros_funnel_row$funnel_flag == "outside_95pct" &
     ros_funnel_row$direction == "understaffed_vs_expected" ~
     "That gap sits outside the 95% range where staffing this far below expectation is unlikely to be chance — worth a serious look at the next ARRS hire.",
   ros_funnel_row$funnel_flag == "within_expected_range" ~
-    "That's within the range of normal variation nationally — not a statistical outlier on its own, though still worth reading alongside the peer comparison below.",
+    "That's within the range of normal variation nationally — not a statistical outlier on its own.",
   TRUE ~
     "That's actually above what's expected given its patient population — the opposite direction, worth understanding before assuming a staffing gap here."
 )
@@ -117,8 +110,7 @@ cat(":::\n")
 | Metric | This PCN | What it means |
 |---|---|---|
 | Staffing vs. expected need (ROS funnel) | `{r} sprintf("%.0f%%", ros_funnel_row$staffing_ratio_pct)` (`{r} gsub("_", " ", ros_funnel_row$funnel_flag)`) | Actual FTE against what list size and deprivation predict, benchmarked nationally — a PCN is flagged for being a statistical outlier, not for topping a ranking |
-| ARRS FTE currently in post | `{r} sprintf("%.1f", ros_row$arrs_fte)` | Additional-roles staff already funded and working in this PCN |
-| Peer Performance Deficit (PPD) | `{r} sprintf("%.1f", ppd_row$ppd)`-point gap | Whether QOF achievement here trails PCNs that face the same list size, deprivation, and disease burden — see below |
+| ARRS FTE currently in post | `{r} sprintf("%.1f", workforce_row$arrs_fte)` | Additional-roles staff already funded and working in this PCN |
 
 ## Is this staffing gap real, or just noise?
 
@@ -168,24 +160,11 @@ of weighted need (list size × IMD score — ROS's own numerator, see
 group to make its point: `{r} pcn_name` is plotted against every PCN in
 England, on the same measure, with nothing else mixed in.
 
-## Is the gap real, or just this PCN?
-
-`{r} pcn_name` is also behind PCNs that face the closest thing to the same
-challenges nationally (matched on list size, deprivation, and disease-register
-prevalence): those PCNs hit a median
-**`{r} pct1(ppd_row$peer_median_qof_achievement_pct)`** on QOF achievement
-against `{r} pcn_name`'s **`{r} pct1(ppd_row$own_qof_achievement_pct)`** — a
-**`{r} sprintf("%.1f", ppd_row$ppd)`-point gap** against `{r} ppd_row$n_peers`
-peer PCNs. That's a second, independent signal pointing the same direction as
-ROS: this isn't one metric's fluke, there's real headroom here. This finding
-is a question worth asking, not a verdict — see *Limitations* for what a
-peer-group comparison can and can't prove.
-
 # Limitations
 
-- **This is a question, not a verdict.** Every gap above is worth a
-  conversation, not a conclusion — case-mix, coding practice, and local
-  context all vary in ways this data doesn't capture.
+- **This is a question, not a verdict.** This gap is worth a conversation,
+  not a conclusion — case-mix, coding practice, and local context all vary
+  in ways this data doesn't capture.
 - **ARRS FTE gaps are treated as zero, not missing.** A handful of PCNs have
   no rows in the PCN Workforce file; ROS treats that as zero ARRS staff — the
   conservative read, since understating ARRS FTE only raises ROS — rather
@@ -197,14 +176,9 @@ peer-group comparison can and can't prove.
   logic as NHS SMR-style funnel plots, but FTE is fractional, not a genuine
   count of discrete events, so the Poisson-based control limits are an
   approximation, not an exact statistical fit.
-- **PPD's peer group is our own construction**, replicating NHS England's
-  published CCG-similarity method — not an official government comparator.
 - **No per-PCN £ figure for ARRS spend or underspend exists publicly**
   below ICB level — nothing here should be read as a costed claim.
-- **QOF disease-register prevalence** (used to build the peer group) is a
-  relative similarity index across 21 conditions, not a clinical prevalence
-  rate — it double-counts multimorbid patients by design.
 - **DNA (Did Not Attend) rates are not yet in this pipeline** — CLAUDE.md's
   Phase 3 spec calls for a DNA benchmark and it isn't here yet.
-- **This report is a first draft**, rendered against one pilot PCN as a
-  test case. Page count, layout, and section order are all still open.
+- **This report is a first draft**, rendered against one PCN as a test
+  case. Page count, layout, and section order are all still open.

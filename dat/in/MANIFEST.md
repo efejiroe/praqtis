@@ -49,34 +49,6 @@ the vintage the file itself claims to be.
 - **Downloaded**: 2026-08-07
 - **Vintage**: 30 June 2026 snapshot
 
-## qof-2425-prac-dom-ach.xlsx
-
-- **Source**: NHS England Digital, "Quality and Outcomes Framework,
-  2024-25" — practice-level overall achievement
-  https://digital.nhs.uk/data-and-information/publications/statistical/quality-and-outcomes-framework-achievement-prevalence-and-exceptions-data/2024-25
-- **Direct URL**: https://files.digital.nhs.uk/EB/16B1C0/qof-2425-prac-dom-ach.xlsx
-- **Downloaded**: 2026-08-07
-- **Vintage**: 2024-25 (Apr 2024 - Mar 2025), 6,196 practice rows incl. footer
-
-## PREVALENCE_2425.csv
-
-- **Source**: NHS England Digital, "Quality and Outcomes Framework,
-  2024-25" raw data — practice-level disease register counts across 21
-  chronic conditions (AF, AST, CAN, CHD, CKD, COPD, DEM, DEP, DM, EP, HF,
-  HYP, LD, MH, NDH, OB, OST, PAD, PC, RA, STIA), each with its own
-  correctly-scoped denominator
-  https://digital.nhs.uk/data-and-information/publications/statistical/quality-and-outcomes-framework-achievement-prevalence-and-exceptions-data/2024-25
-- **Direct URL**: https://files.digital.nhs.uk/95/4708D7/QOF2425.zip
-  (only `PREVALENCE_2425.csv` extracted and kept — the zip also bundles
-  8 large regional achievement files, ~94MB, not needed here)
-- **Downloaded**: 2026-08-08
-- **Vintage**: 2024-25 (Apr 2024 - Mar 2025)
-- Used to build PPD's "disease prevalence" peer-group variable (see
-  ref/CONCEPT.md) as the list-size-weighted mean register rate across
-  all 21 conditions per PCN — this double-counts multimorbid patients,
-  so it's a relative similarity index for clustering, not a clinical
-  prevalence %, and is never published as a standalone figure.
-
 ## Known data-quality notes
 
 - The mapping file carries a placeholder `PCN_CODE = "U"` / `PCN_NAME =
@@ -92,10 +64,6 @@ the vintage the file itself claims to be.
   South East London Integrated Care Board" vs "NHS South East London
   ICB") — all joins in `src/aggregate_pcn.R` match on ICB/PCN **code**,
   never name.
-- QOF's own embedded PCN attribution (2024-25 vintage) can be stale
-  against the current ePCN mapping — three South East London practices
-  were reassigned to a different PCN between the two. `pcn_qof()` always
-  uses the current ePCN mapping's attribution, not QOF's own.
 - Per CLAUDE.md, every source is collated at GP-practice level first and
   aggregated to PCN ourselves — even registration, which also publishes
   ready-made PCN-level rows — so a future report can drill down to
@@ -106,8 +74,8 @@ the vintage the file itself claims to be.
 - A small number of PCNs straddle two ICBs (the ODS ePCN spec documents
   this explicitly — not a data error), e.g. U41591 "Coast and Country
   PCN" splits across Devon and Cornwall. This broke the "PCN_CODE is a
-  unique key" assumption once aggregation went national for PPD (surfaced
-  as a dplyr many-to-many join warning, not a silent wrong number).
+  unique key" assumption once aggregation went national (surfaced as a
+  dplyr many-to-many join warning, not a silent wrong number).
   `pcn_primary_icb()` now assigns each PCN a single ICB — the one with
   the majority of its registered patients — for labelling/filtering only;
   every PCN's own totals (list size, FTE, etc.) still sum across all of
