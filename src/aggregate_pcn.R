@@ -1,9 +1,9 @@
-# Aggregate each raw data source to PCN level, nationally — no ROS
-# scoring here (that's compute_ros.R); this is just fetch-and-pool-to-PCN.
-# Built at national scale, not pre-filtered to one ICB, because the ROS
-# funnel plot's control limits need every PCN in England to reflect the
-# true national spread — filter_pcn_icb() below is the thin final step
-# for ICB-only views, if one is ever needed.
+# Aggregate each raw data source to PCN level, nationally — no scoring
+# here (that's compute_funnel.R); this is just fetch-and-pool-to-PCN.
+# Built at national scale, not pre-filtered to one ICB, because the
+# staffing funnel plot's control limits need every PCN in England to
+# reflect the true national spread — filter_pcn_icb() below is the thin
+# final step for ICB-only views, if one is ever needed.
 #
 # ICBs are matched by ICB_CODE, not ICB_NAME — NHS Digital publications
 # don't agree on the name string (the ePCN mapping says "NHS South East
@@ -86,8 +86,8 @@ pcn_imd <- function(practice_imd, practice_registration, epcn_mapping, primary_i
 }
 
 # Practice-level GP+DPC FTE summed to PCN, alongside PCN-employed (mostly
-# ARRS) FTE — the two raw ingredients of the ROS denominator, not yet
-# combined into ROS itself.
+# ARRS) FTE — the two raw ingredients of a PCN's actual staffing total,
+# not yet combined (see compute_funnel.R).
 pcn_workforce <- function(practice_gp_workforce, pcn_arrs_workforce, epcn_mapping, primary_icb) {
   practice_fte_by_pcn <- pcn_icb_lookup(epcn_mapping) |>
     dplyr::distinct(PRACTICE_CODE, PCN_CODE, PCN_NAME) |>

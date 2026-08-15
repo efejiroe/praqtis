@@ -7,7 +7,7 @@ format:
       x: 1.8cm
       y: 1.6cm
 params:
-  pcn_code: "U24992" # Heritage PCN — flagged as a staffing outlier (outside 95% band) by the ROS funnel plot
+  pcn_code: "U24992" # Heritage PCN — flagged as a staffing outlier (outside 95% band) by the national funnel-plot check
 ---
 
 ```{r}
@@ -30,7 +30,7 @@ tr <- function(name) tar_read_raw(name, store = store)
 national_pcn_list_size <- tr("national_pcn_list_size")
 national_pcn_primary_icb <- tr("national_pcn_primary_icb")
 national_pcn_workforce <- tr("national_pcn_workforce")
-national_pcn_ros_funnel_flags <- tr("national_pcn_ros_funnel_flags")
+national_staffing_funnel_flags <- tr("national_staffing_funnel_flags")
 
 pcn_code <- params$pcn_code
 
@@ -39,22 +39,22 @@ icb_name <- filter(national_pcn_primary_icb, PCN_CODE == pcn_code)$ICB_NAME
 
 list_size_row <- filter(national_pcn_list_size, PCN_CODE == pcn_code)
 workforce_row <- filter(national_pcn_workforce, PCN_CODE == pcn_code)
-ros_funnel_row <- filter(national_pcn_ros_funnel_flags, PCN_CODE == pcn_code)
+funnel_row <- filter(national_staffing_funnel_flags, PCN_CODE == pcn_code)
 
 # The headline claim a PCN is identified because its staffing is a
 # statistical outlier, not because it happens to rank highest — so the
 # copy has to read differently depending on whether this PCN actually
 # is one (direction points from lower-than-expected FTE for the ARRS
 # case; a small minority of PCNs land here — see
-# national_pcn_ros_funnel_flags for the national split).
-ros_flag_sentence <- dplyr::case_when(
-  ros_funnel_row$funnel_flag == "outside_99.8pct" &
-    ros_funnel_row$direction == "understaffed_vs_expected" ~
+# national_staffing_funnel_flags for the national split).
+flag_sentence <- dplyr::case_when(
+  funnel_row$funnel_flag == "outside_99.8pct" &
+    funnel_row$direction == "understaffed_vs_expected" ~
     "That gap is large enough to sit outside the 99.8% range — the strongest, most statistically defensible case for the next ARRS hire.",
-  ros_funnel_row$funnel_flag == "outside_95pct" &
-    ros_funnel_row$direction == "understaffed_vs_expected" ~
+  funnel_row$funnel_flag == "outside_95pct" &
+    funnel_row$direction == "understaffed_vs_expected" ~
     "That gap sits outside the 95% range where staffing this far below expectation is unlikely to be chance — worth a serious look at the next ARRS hire.",
-  ros_funnel_row$funnel_flag == "within_expected_range" ~
+  funnel_row$funnel_flag == "within_expected_range" ~
     "That's within the range of normal variation nationally — not a statistical outlier on its own.",
   TRUE ~
     "That's actually above what's expected given its patient population — the opposite direction, worth understanding before assuming a staffing gap here."
@@ -99,8 +99,8 @@ pct1 <- function(x) sprintf("%.1f%%", x)
 cat("::: {.callout-important appearance=\"simple\"}\n\n")
 cat(sprintf(
   "**%s is staffed at %.0f%% of what its patient population and deprivation profile predict.** %.1f FTE in post against an expected %.1f FTE, benchmarked against every PCN in England (Spiegelhalter funnel plot — see below). %s\n\n",
-  pcn_name, ros_funnel_row$staffing_ratio_pct, ros_funnel_row$actual_fte, ros_funnel_row$expected_fte,
-  ros_flag_sentence
+  pcn_name, funnel_row$staffing_ratio_pct, funnel_row$actual_fte, funnel_row$expected_fte,
+  flag_sentence
 ))
 cat(":::\n")
 ```
@@ -109,19 +109,19 @@ cat(":::\n")
 
 | Metric | This PCN | What it means |
 |---|---|---|
-| Staffing vs. expected need (ROS funnel) | `{r} sprintf("%.0f%%", ros_funnel_row$staffing_ratio_pct)` (`{r} gsub("_", " ", ros_funnel_row$funnel_flag)`) | Actual FTE against what list size and deprivation predict, benchmarked nationally — a PCN is flagged for being a statistical outlier, not for topping a ranking |
+| Staffing vs. expected need | `{r} sprintf("%.0f%%", funnel_row$staffing_ratio_pct)` (`{r} gsub("_", " ", funnel_row$funnel_flag)`) | Actual FTE against what list size and deprivation predict, benchmarked nationally — a PCN is flagged for being a statistical outlier, not for topping a ranking |
 | ARRS FTE currently in post | `{r} sprintf("%.1f", workforce_row$arrs_fte)` | Additional-roles staff already funded and working in this PCN |
 
 ## Is this staffing gap real, or just noise?
 
 ```{r}
-#| label: fig-ros-funnel
+#| label: fig-staffing-funnel
 #| echo: false
 #| fig-width: 6.4
 #| fig-height: 3.6
-#| fig-cap: !expr paste0("Actual vs. expected FTE across all ", nrow(national_pcn_ros_funnel_flags), " PCNs nationally (Spiegelhalter overdispersion-adjusted control limits). ", pcn_name, " marked in blue.")
+#| fig-cap: !expr paste0("Actual vs. expected FTE across all ", nrow(national_staffing_funnel_flags), " PCNs nationally (Spiegelhalter overdispersion-adjusted control limits). ", pcn_name, " marked in blue.")
 
-funnel_data <- national_pcn_ros_funnel_flags |>
+funnel_data <- national_staffing_funnel_flags |>
   mutate(is_this_pcn = PCN_CODE == pcn_code)
 
 this_row <- filter(funnel_data, is_this_pcn)
@@ -155,10 +155,10 @@ ggplot(funnel_data, aes(x = expected_fte, y = staffing_ratio_pct)) +
 Dashed lines mark the 95% control band, dotted lines the 99.8% band — both
 computed nationally, so a PCN isn't flagged just because it's small and its
 staffing ratio is noisy. "Expected" FTE is the national average FTE per unit
-of weighted need (list size × IMD score — ROS's own numerator, see
-`src/compute_ros.R`) applied to this PCN's own list. It doesn't need a peer
-group to make its point: `{r} pcn_name` is plotted against every PCN in
-England, on the same measure, with nothing else mixed in.
+of weighted need (list size × IMD score — see `src/compute_funnel.R`) applied
+to this PCN's own list. It doesn't need a peer group to make its point:
+`{r} pcn_name` is plotted against every PCN in England, on the same
+measure, with nothing else mixed in.
 
 # Limitations
 
@@ -166,10 +166,10 @@ England, on the same measure, with nothing else mixed in.
   not a conclusion — case-mix, coding practice, and local context all vary
   in ways this data doesn't capture.
 - **ARRS FTE gaps are treated as zero, not missing.** A handful of PCNs have
-  no rows in the PCN Workforce file; ROS treats that as zero ARRS staff — the
-  conservative read, since understating ARRS FTE only raises ROS — rather
-  than omitting the PCN, but the true figure could be higher than shown (see
-  `src/compute_ros.R`).
+  no rows in the PCN Workforce file; this is treated as zero ARRS staff —
+  the conservative read, since understating ARRS FTE only widens the
+  staffing gap shown — rather than omitting the PCN, but the true figure
+  could be higher than shown (see `src/compute_funnel.R`).
 - **"Expected" FTE is a national average, not a funding entitlement.** It's
   built by applying the national average staffing rate (FTE per unit of
   list size × IMD) to this PCN's own list — the same indirect-standardisation

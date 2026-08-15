@@ -10,17 +10,18 @@ Acts as a:
 
 ## Context
 
-* Building PRAQTIS: a diagnostic report that identifies where a small operational change yields the largest improvement, led by a national funnel-plot outlier check on Recruitment Opportunity Score (ROS) — see ref/CONCEPT.md
+* Building PRAQTIS: a diagnostic report that identifies where a small operational change yields the largest improvement, led by a national funnel-plot outlier check on PCN staffing (actual FTE vs. expected FTE, given list size and deprivation) — see ref/CONCEPT.md
 * Output is a cold-pitch artefact — a parameterised two-page report rendered per PCN
-* Current scope is deliberately an MVP: pull the data, aggregate to PCN, run the national ROS funnel-plot check — no PPD, no practice-level drill-down, no QOF. Those were built, validated, and then cut back out (see git history) to keep the pipeline to the one metric that's actually shipping; re-add only on explicit direction, not by default
+* Current scope is deliberately an MVP: pull the data, aggregate to PCN, run the national staffing funnel-plot check — no PPD, no practice-level drill-down, no QOF, no separate ranking score. Those were built, validated, and then cut back out (see git history) to keep the pipeline to the one check that's actually shipping; re-add only on explicit direction, not by default
+* Don't reintroduce "ROS"/"Recruitment Opportunity Score" anywhere — it was the working name for this metric early on, the underlying score it named was found to be dead code (never read by the funnel check), and the acronym itself caused confusion once it surfaced unexplained in report copy. Call it "the staffing funnel check" instead
 
 ## Actions
 
 Following the following roadmap (phased build — do not start a phase before the prior one is validated)
-1. Phase 0 — Reconnaissance: confirmed ACSC admissions are NOT obtainable below County/UA level (metric dropped); confirmed ROS inputs (GP registration, Fingertips IMD, NHS Digital workforce/ARRS MI) are obtainable at practice level, poolable to PCN via the ePCN mapping — see ref/CONCEPT.md for the per-metric corrections and open questions this raised. PPD and QOF were also validated at this stage but have since been descoped from the MVP (see Context above)
+1. Phase 0 — Reconnaissance: confirmed ACSC admissions are NOT obtainable below County/UA level (metric dropped); confirmed staffing-funnel inputs (GP registration, Fingertips IMD, NHS Digital workforce/ARRS MI) are obtainable at practice level, poolable to PCN via the ePCN mapping — see ref/CONCEPT.md for the per-metric corrections and open questions this raised. PPD and QOF were also validated at this stage but have since been descoped from the MVP (see Context above)
 2. Phase 1 — Single-PCN pipeline: fetch GP registration + ePCN spine + Fingertips IMD + NHS Digital workforce/ARRS MI; aggregate one ICB to PCN level; no modelling yet
-3. Phase 2 — National funnel model: compute ROS directly from pooled data; national funnel-plot outlier flagging on ROS (Spiegelhalter method), aggregated to PCN before flagging
-4. Phase 3 — Report template: parameterised Quarto, one PCN — ROS funnel-plot outlier check, order-of-magnitude context only (never a per-PCN £ underspend claim — not publicly evidenced), DNA/ARRS benchmarks, limitations footer
+3. Phase 2 — National funnel model: pool staffing need and actual FTE directly from aggregated data; national funnel-plot outlier flagging on staffing (Spiegelhalter method), aggregated to PCN before flagging
+4. Phase 3 — Report template: parameterised Quarto, one PCN — staffing funnel-plot outlier check, order-of-magnitude context only (never a per-PCN £ underspend claim — not publicly evidenced), DNA/ARRS benchmarks, limitations footer
 5. Phase 4 — Validation: render for one PCN where a real contact can check it; confirm nothing is factually wrong and it reads past page one
 6. Phase 5 — Scale: batch-render the shortlist — only after Phase 4 passes, not before
 

@@ -34,10 +34,10 @@ list(
     )
   ),
 
-  # National funnel-plot outlier check on ROS's staffing ratio (see
-  # compute_ros.R) — the MVP's one scoring step.
+  # National funnel-plot outlier check on staffing (see compute_funnel.R)
+  # — the MVP's one scoring step.
   tar_target(
-    national_pcn_ros_funnel_flags,
-    national_pcn_ros_funnel(national_pcn_list_size, national_pcn_imd, national_pcn_workforce)
+    national_staffing_funnel_flags,
+    national_staffing_funnel(national_pcn_list_size, national_pcn_imd, national_pcn_workforce)
   )
 )

@@ -11,7 +11,7 @@ download_and_cache_zip <- function(url, zip_name, dest_dir = "dat/in") {
 }
 
 # Practice-level GP + Direct Patient Care FTE — the "Total Practice FTE"
-# term in the ROS denominator (see ref/CONCEPT.md).
+# term in the staffing funnel check's actual-FTE figure (see ref/CONCEPT.md).
 fetch_practice_gp_workforce <- function(dest_dir = "dat/in") {
   zip_path <- download_and_cache_zip(
     "https://files.digital.nhs.uk/B1/F5AC73/GPWPracticeCSV.062026.zip",
@@ -27,9 +27,9 @@ fetch_practice_gp_workforce <- function(dest_dir = "dat/in") {
 
 # PCN-employed staff FTE, individual-level. PCNs directly employ almost
 # exclusively ARRS-funded roles, so this is the "ARRS FTE already in post"
-# term in the ROS denominator — see the corrected formula note in
-# ref/CONCEPT.md (no PCN-level ARRS *spend* is publicly available, only
-# FTE/headcount).
+# term in the staffing funnel check's actual-FTE figure — see the
+# corrected formula note in ref/CONCEPT.md (no PCN-level ARRS *spend* is
+# publicly available, only FTE/headcount).
 fetch_pcn_arrs_workforce <- function(dest_dir = "dat/in") {
   zip_path <- download_and_cache_zip(
     "https://files.digital.nhs.uk/A8/E524AA/PCNWFIndividualCSV.062026.zip",
