@@ -1,5 +1,5 @@
 ---
-title: "PRAQTIS diagnostic snapshot"
+title: "PCN-ARRS diagnostic snapshot"
 format:
   typst:
     papersize: a4
@@ -98,7 +98,7 @@ pct1 <- function(x) sprintf("%.1f%%", x)
 
 cat("::: {.callout-important appearance=\"simple\"}\n\n")
 cat(sprintf(
-  "**%s is staffed at %.0f%% of what its patient population and deprivation profile predict.** %.1f FTE in post against an expected %.1f FTE, benchmarked against every PCN in England (Spiegelhalter funnel plot — see below). %s\n\n",
+  "**%s is staffed at %.0f%% of what its age profile and deprivation predict.** %.1f FTE in post against an expected %.1f FTE, benchmarked against every PCN in England (Spiegelhalter funnel plot — see below). %s\n\n",
   pcn_name, funnel_row$staffing_ratio_pct, funnel_row$actual_fte, funnel_row$expected_fte,
   flag_sentence
 ))
@@ -109,7 +109,7 @@ cat(":::\n")
 
 | Metric | This PCN | What it means |
 |---|---|---|
-| Staffing vs. expected need | `{r} sprintf("%.0f%%", funnel_row$staffing_ratio_pct)` (`{r} gsub("_", " ", funnel_row$funnel_flag)`) | Actual FTE against what list size and deprivation predict, benchmarked nationally — a PCN is flagged for being a statistical outlier, not for topping a ranking |
+| Staffing vs. expected need | `{r} sprintf("%.0f%%", funnel_row$staffing_ratio_pct)` (`{r} gsub("_", " ", funnel_row$funnel_flag)`) | Actual FTE against what the PCN's age profile and deprivation predict, benchmarked nationally — a PCN is flagged for being a statistical outlier, not for topping a ranking |
 | ARRS FTE currently in post | `{r} sprintf("%.1f", workforce_row$arrs_fte)` | Additional-roles staff already funded and working in this PCN |
 
 ## Is this staffing gap real, or just noise?
@@ -154,11 +154,20 @@ ggplot(funnel_data, aes(x = expected_fte, y = staffing_ratio_pct)) +
 
 Dashed lines mark the 95% control band, dotted lines the 99.8% band — both
 computed nationally, so a PCN isn't flagged just because it's small and its
-staffing ratio is noisy. "Expected" FTE is the national average FTE per unit
-of weighted need (list size × IMD score — see `src/compute_funnel.R`) applied
-to this PCN's own list. It doesn't need a peer group to make its point:
-`{r} pcn_name` is plotted against every PCN in England, on the same
+staffing ratio is noisy. "Expected" FTE reflects two things about this PCN's
+own registered population: its age profile (patients under 15, 15–64, and
+65+ each carry a different national-average staffing rate, since older
+patients are well established to need more GP time) and its deprivation
+profile — a standard indirect-standardisation approach (Spiegelhalter DJ,
+"Funnel plots for comparing institutional performance," *Statistics in
+Medicine* 2005;24(8):1185-1202). It doesn't need a peer group to make its
+point: `{r} pcn_name` is plotted against every PCN in England, on the same
 measure, with nothing else mixed in.
+
+This model uses current (2026) national staffing and population data, and
+its expected-staffing weights have been checked against peer-reviewed
+academic research on GP consultation patterns (Mukhtar et al. 2018, *Br J
+Gen Pract*, DOI 10.3399/bjgp18X695981).
 
 # Limitations
 
@@ -166,19 +175,36 @@ measure, with nothing else mixed in.
   not a conclusion — case-mix, coding practice, and local context all vary
   in ways this data doesn't capture.
 - **ARRS FTE gaps are treated as zero, not missing.** A handful of PCNs have
-  no rows in the PCN Workforce file; this is treated as zero ARRS staff —
-  the conservative read, since understating ARRS FTE only widens the
-  staffing gap shown — rather than omitting the PCN, but the true figure
-  could be higher than shown (see `src/compute_funnel.R`).
+  no rows in NHS England Digital's Primary Care Network Workforce
+  publication; this is treated as zero ARRS staff — the conservative read,
+  since understating ARRS FTE only widens the staffing gap shown — rather
+  than omitting the PCN, but the true figure could be higher than shown.
 - **"Expected" FTE is a national average, not a funding entitlement.** It's
-  built by applying the national average staffing rate (FTE per unit of
-  list size × IMD) to this PCN's own list — the same indirect-standardisation
-  logic as NHS SMR-style funnel plots, but FTE is fractional, not a genuine
-  count of discrete events, so the Poisson-based control limits are an
+  built by fitting a Poisson rate regression of actual FTE against each
+  PCN's own population (age profile, sex, and deprivation), with list size
+  as the exposure — the same indirect-standardisation logic as NHS
+  SMR-style funnel plots, but FTE is fractional, not a genuine count of
+  discrete events, so the Poisson-based control limits are an
   approximation, not an exact statistical fit.
+- **The age/deprivation weighting is our own fitted model, not NHS
+  England's Global Sum Allocation Formula** (the "Carr-Hill formula," the
+  standard NHS practice-funding formula). We could not obtain and verify
+  its exact published age-sex coefficients, so instead we fit our own
+  weights directly from national staffing data. Checked informally
+  against Mukhtar TK, Bankhead C, Stevens S, Perera R, Holt TA, Salisbury
+  C, Hobbs FDR, "Factors associated with consultation rates in general
+  practice in England, 2013-2014," *Br J Gen Pract* 2018;68(670):e370-e377
+  (a different outcome to what we model here, and not used as a
+  production input) — deprivation terms corroborate closely, age terms
+  diverge notably, an open question rather than a settled one. Doesn't
+  include morbidity, which the literature treats as a further
+  significant, independent driver of need that this pipeline doesn't yet
+  capture.
 - **No per-PCN £ figure for ARRS spend or underspend exists publicly**
   below ICB level — nothing here should be read as a costed claim.
-- **DNA (Did Not Attend) rates are not yet in this pipeline** — CLAUDE.md's
-  Phase 3 spec calls for a DNA benchmark and it isn't here yet.
+- **DNA (Did Not Attend) rate and practice-level detail are tracked but
+  not shown here** — this report is deliberately scoped to the ARRS
+  staffing disclosure only; that detail is available in a follow-up
+  conversation.
 - **This report is a first draft**, rendered against one PCN as a test
   case. Page count, layout, and section order are all still open.

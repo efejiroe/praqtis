@@ -1,4 +1,4 @@
-# PRAQTIS
+# PCN-ARRS
 
 A reproducible NHS primary-care analytics pipeline that identifies where
 a small operational change would yield the largest improvement for a
@@ -28,10 +28,24 @@ progress.
 - **National funnel-plot outlier flagging on staffing** —
   Spiegelhalter's overdispersion-adjusted method (via `FunnelPlotR`), run
   nationally so a PCN is identified because its staffing is a
-  statistical outlier against expected need (list size weighted by
-  deprivation), not just because it tops a ranking; control limits
-  reflect the true national spread, so small PCNs aren't flagged just
-  for being small and noisy.
+  statistical outlier against expected need, not just because it tops a
+  ranking; control limits reflect the true national spread, so small
+  PCNs aren't flagged just for being small and noisy.
+- **Age- and deprivation-adjusted expected staffing** — "expected FTE" is
+  self-fitted (a quasipoisson rate regression on each PCN's own
+  population composition — age, sex, and IMD-quintile shares — with list
+  size as the exposure offset; see `src/compute_funnel.R`), not imported
+  from an external formula. As a corroboration check (not a production
+  input), the fitted rate ratios are compared against published figures
+  from Mukhtar TK, Bankhead C, Stevens S, Perera R, Holt TA, Salisbury C,
+  Hobbs FDR. "Factors associated with consultation rates in general
+  practice in England, 2013–2014: a cross-sectional study." *Br J Gen
+  Pract* 2018;68(670):e370-e377. DOI:
+  [10.3399/bjgp18X695981](https://doi.org/10.3399/bjgp18X695981) (open
+  access, CC BY-NC 4.0). Deprivation terms corroborate closely;
+  age terms diverge substantially — see
+  `targets::tar_read(national_staffing_model_comparison)` and
+  `src/compute_funnel.R` for the numbers and discussion.
 
 ## Usage
 

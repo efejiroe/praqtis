@@ -49,6 +49,20 @@ the vintage the file itself claims to be.
 - **Downloaded**: 2026-08-07
 - **Vintage**: 30 June 2026 snapshot
 
+## Practice_Level_Crosstab_Jun_26.zip
+
+- **Source**: NHS England Digital, "Appointments in General Practice"
+  (GPAD) monthly publication — practice-level appointment status
+  crosstab (HCP type / national category / mode / status / booking
+  interval)
+  https://digital.nhs.uk/data-and-information/publications/statistical/appointments-in-general-practice/june-2026
+- **Direct URL**: https://files.digital.nhs.uk/36/FE673C/Practice_Level_Crosstab_Jun_26.zip
+- **Downloaded**: 2026-08-16
+- **Vintage**: June 2026 snapshot. The zip also bundles April and May
+  2026 crosstabs (same publication, three-month rolling window) — only
+  June is read, for consistency with the workforce/registration sources'
+  own June 2026 vintage.
+
 ## Known data-quality notes
 
 - The mapping file carries a placeholder `PCN_CODE = "U"` / `PCN_NAME =
@@ -80,3 +94,13 @@ the vintage the file itself claims to be.
   the majority of its registered patients — for labelling/filtering only;
   every PCN's own totals (list size, FTE, etc.) still sum across all of
   its practices regardless of which ICB each one sits in.
+- GPAD's crosstab uses `GP_CODE` for the practice-code column (not
+  `PRACTICE_CODE`/`PRAC_CODE` as in other sources) — another instance of
+  the "NHS Digital publications don't agree on column names" lesson
+  above. `APPT_STATUS` takes exactly three values: `Attended`, `DNA`,
+  `Unknown` — `Unknown` is excluded from the DNA-rate denominator
+  (neither a confirmed attendance nor a confirmed non-attendance). 23 of
+  6,139 practices in the registration file have no matching row in the
+  DNA data (no recorded appointment activity that month) — left as
+  missing, not coalesced to zero, consistent with `arrs_fte_missing`'s
+  precedent elsewhere in this pipeline.
