@@ -31,6 +31,7 @@ national_pcn_list_size <- tr("national_pcn_list_size")
 national_pcn_primary_icb <- tr("national_pcn_primary_icb")
 national_pcn_workforce <- tr("national_pcn_workforce")
 national_staffing_funnel_flags <- tr("national_staffing_funnel_flags")
+national_staffing_gap <- tr("national_staffing_gap")
 
 pcn_code <- params$pcn_code
 
@@ -168,6 +169,45 @@ This model uses current (2026) national staffing and population data, and
 its expected-staffing weights have been checked against peer-reviewed
 academic research on GP consultation patterns (Mukhtar et al. 2018, *Br J
 Gen Pract*, DOI 10.3399/bjgp18X695981).
+
+## How far is this from similar PCNs?
+
+```{r}
+#| label: fig-staffing-gap
+#| echo: false
+#| fig-width: 6.4
+#| fig-height: 1.9
+#| fig-cap: !expr paste0("How many more full-time-equivalent (FTE) staff ", pcn_name, " would have if it matched each national reference point. FTE covers all staff groups (GPs, direct patient care and ARRS roles). It is not a headcount, because many posts are part-time. Targets compare this PCN with PCNs that have a similar population; they are not a staffing requirement.")
+
+gap_data <- filter(national_staffing_gap, PCN_CODE == pcn_code) |>
+  mutate(
+    benchmark = factor(benchmark, levels = rev(levels(benchmark))),
+    gap_label = if_else(
+      gap_fte > 0,
+      sprintf("%.1f FTE  (+%.1f)", target_fte, gap_fte),
+      sprintf("%.1f FTE  (already met)", target_fte)
+    )
+  )
+actual_fte_now <- gap_data$actual_fte[1]
+x_max <- max(gap_data$target_fte, actual_fte_now)
+
+ggplot(gap_data, aes(y = benchmark)) +
+  geom_vline(xintercept = actual_fte_now, colour = col_ink_muted, linewidth = 0.3) +
+  geom_segment(
+    aes(x = actual_fte, xend = target_fte, yend = benchmark),
+    colour = col_accent, linewidth = 2, lineend = "round"
+  ) +
+  geom_point(aes(x = target_fte), colour = col_accent, size = 2.6) +
+  geom_text(aes(x = target_fte, label = gap_label), hjust = -0.18, size = 2.6, colour = col_ink_primary) +
+  annotate(
+    "text", x = actual_fte_now, y = 4.55, label = sprintf("In post now: %.1f FTE", actual_fte_now),
+    hjust = 1.05, size = 2.5, colour = col_ink_secondary
+  ) +
+  scale_x_continuous(expand = expansion(mult = c(0.05, 0.02))) +
+  coord_cartesian(xlim = c(NA, x_max * 1.22), clip = "off") +
+  chart_theme +
+  theme(panel.grid.major.y = element_blank())
+```
 
 # Limitations
 

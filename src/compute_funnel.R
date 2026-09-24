@@ -117,6 +117,42 @@ national_staffing_funnel <- function(national_staffing_model, national_pcn_compo
     dplyr::arrange(staffing_ratio_pct)
 }
 
+# FTE gap between each PCN's actual staffing and four national reference
+# points, for the report's "how far from typical?" figure. All four are
+# staffing ratios (actual ÷ expected FTE), converted back to FTE with
+# the PCN's own expected FTE — so adding staff moves only actual_fte,
+# never the target (expected FTE and the funnel limits depend on patient
+# mix alone, not on staffing).
+#   - edge of the 95% band: this PCN's own lower 95% control limit (the
+#     limits narrow with PCN size, so this one varies per PCN)
+#   - lower-quartile / median PCN: national quantiles of staffing ratio
+#   - exactly as expected: 100%
+# FTE spans every staff group in actual_fte (GP, direct patient care and
+# ARRS), not ARRS alone, and is not a headcount — many posts are part-time.
+# Framed as a comparison with peers, never as a staffing requirement:
+# "expected" is what PCNs with a similar population typically have, not
+# what patients need.
+staffing_gap_benchmarks <- function(national_staffing_funnel_flags) {
+  lower_quartile_pct <- stats::quantile(national_staffing_funnel_flags$staffing_ratio_pct, 0.25, names = FALSE)
+  median_pct <- stats::median(national_staffing_funnel_flags$staffing_ratio_pct)
+
+  base <- dplyr::select(national_staffing_funnel_flags, PCN_CODE, expected_fte, actual_fte)
+  benchmark_labels <- c("Edge of the 95% range", "Lower-quartile PCN", "Typical (median) PCN", "Exactly as expected")
+
+  dplyr::bind_rows(
+    dplyr::mutate(base, benchmark = benchmark_labels[1], target_ratio_pct = national_staffing_funnel_flags$od95_lower_pct),
+    dplyr::mutate(base, benchmark = benchmark_labels[2], target_ratio_pct = lower_quartile_pct),
+    dplyr::mutate(base, benchmark = benchmark_labels[3], target_ratio_pct = median_pct),
+    dplyr::mutate(base, benchmark = benchmark_labels[4], target_ratio_pct = 100)
+  ) |>
+    dplyr::mutate(
+      benchmark = factor(benchmark, levels = benchmark_labels),
+      target_fte = round(expected_fte * target_ratio_pct / 100, 1),
+      gap_fte = round(target_fte - actual_fte, 1)
+    ) |>
+    dplyr::select(PCN_CODE, benchmark, target_ratio_pct, actual_fte, target_fte, gap_fte)
+}
+
 # Published rate ratios from:
 #   Mukhtar TK, Bankhead C, Stevens S, Perera R, Holt TA, Salisbury C,
 #   Hobbs FDR. "Factors associated with consultation rates in general

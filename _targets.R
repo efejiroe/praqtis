@@ -82,6 +82,10 @@ list(
     )
   ),
   tar_target(
+    national_staffing_gap,
+    staffing_gap_benchmarks(national_staffing_funnel_flags)
+  ),
+  tar_target(
     national_staffing_model_comparison,
     national_model_comparison(national_staffing_model, national_practice_need_bands)
   )
