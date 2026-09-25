@@ -104,3 +104,16 @@ the vintage the file itself claims to be.
   DNA data (no recorded appointment activity that month) — left as
   missing, not coalesced to zero, consistent with `arrs_fte_missing`'s
   precedent elsewhere in this pipeline.
+- 26 ePCN-mapped practices (66,330 registered patients, June 2026) are
+  either absent from the practice workforce file or report exactly 0 GP +
+  Direct Patient Care FTE. A practice with registered patients and no
+  clinical staff can't be real, so both are read as a missing return:
+  `practices_without_fte()` in `src/aggregate_pcn.R` removes those
+  practices' patients AND staff from the staffing funnel, rather than
+  counting zero staff against a full list.
+- 27 PCNs have no rows in the PCN Workforce (ARRS) file. All 27 codes
+  exist in the ePCN mapping, so this isn't a code mismatch — but the
+  file can't distinguish "no ARRS staff" from "not submitted". These
+  PCNs are excluded from the funnel (`pcn_staffing_data()` in
+  `src/compute_funnel.R`) rather than treated as zero ARRS FTE, which
+  had made them look strongly understaffed purely because of missing data.

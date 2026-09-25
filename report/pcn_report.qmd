@@ -7,7 +7,7 @@ format:
       x: 1.8cm
       y: 1.6cm
 params:
-  pcn_code: "U24992" # Heritage PCN — flagged as a staffing outlier (outside 95% band) by the national funnel-plot check
+  pcn_code: "U24992" # Heritage PCN — test case; sits on the edge of the 95% band (within range as of the June 2026 build)
 ---
 
 ```{r}
@@ -32,6 +32,8 @@ national_pcn_primary_icb <- tr("national_pcn_primary_icb")
 national_pcn_workforce <- tr("national_pcn_workforce")
 national_staffing_funnel_flags <- tr("national_staffing_funnel_flags")
 national_staffing_gap <- tr("national_staffing_gap")
+national_pcn_fte_coverage <- tr("national_pcn_fte_coverage")
+national_pcn_exclusions <- tr("national_pcn_exclusions")
 
 pcn_code <- params$pcn_code
 
@@ -41,6 +43,35 @@ icb_name <- filter(national_pcn_primary_icb, PCN_CODE == pcn_code)$ICB_NAME
 list_size_row <- filter(national_pcn_list_size, PCN_CODE == pcn_code)
 workforce_row <- filter(national_pcn_workforce, PCN_CODE == pcn_code)
 funnel_row <- filter(national_staffing_funnel_flags, PCN_CODE == pcn_code)
+coverage_row <- filter(national_pcn_fte_coverage, PCN_CODE == pcn_code)
+
+# PCNs with no ARRS return are left out of the funnel entirely (see
+# compute_funnel.R::pcn_staffing_data()) — there's no staffing comparison
+# to report for them, so refuse to render rather than print an empty page.
+if (nrow(funnel_row) == 0) {
+  stop(pcn_code, " is not in the national staffing funnel (see ",
+       "docs/pcn_exclusions.md) — no report to render.")
+}
+
+# Data-coverage figures for the Limitations section.
+n_pcns_excluded <- sum(national_pcn_exclusions$scope == "Whole PCN")
+n_practices_no_fte <- sum(national_pcn_fte_coverage$n_practices_no_fte)
+list_size_no_fte <- sum(national_pcn_fte_coverage$list_size_no_fte)
+this_pcn_no_fte <- coverage_row$n_practices_no_fte
+fmt_n <- function(x) format(x, big.mark = ",")
+
+this_pcn_coverage_sentence <- if (this_pcn_no_fte > 0) {
+  sprintf(
+    "For %s, %d of its %d practices (%s patients) had no return and %s left out, so its comparison covers the remaining %s patients.",
+    pcn_name, this_pcn_no_fte, coverage_row$n_practices,
+    if (this_pcn_no_fte == 1) "is" else "are",
+    fmt_n(coverage_row$list_size_no_fte),
+    fmt_n(list_size_row$list_size - coverage_row$list_size_no_fte)
+  )
+} else {
+  sprintf("All %d of %s's practices reported staffing.",
+          coverage_row$n_practices, pcn_name)
+}
 
 # The headline claim a PCN is identified because its staffing is a
 # statistical outlier, not because it happens to rank highest — so the
@@ -211,40 +242,21 @@ ggplot(gap_data, aes(y = benchmark)) +
 
 # Limitations
 
-- **This is a question, not a verdict.** This gap is worth a conversation,
-  not a conclusion — case-mix, coding practice, and local context all vary
-  in ways this data doesn't capture.
-- **ARRS FTE gaps are treated as zero, not missing.** A handful of PCNs have
-  no rows in NHS England Digital's Primary Care Network Workforce
-  publication; this is treated as zero ARRS staff — the conservative read,
-  since understating ARRS FTE only widens the staffing gap shown — rather
-  than omitting the PCN, but the true figure could be higher than shown.
-- **"Expected" FTE is a national average, not a funding entitlement.** It's
-  built by fitting a Poisson rate regression of actual FTE against each
-  PCN's own population (age profile, sex, and deprivation), with list size
-  as the exposure — the same indirect-standardisation logic as NHS
-  SMR-style funnel plots, but FTE is fractional, not a genuine count of
-  discrete events, so the Poisson-based control limits are an
-  approximation, not an exact statistical fit.
-- **The age/deprivation weighting is our own fitted model, not NHS
-  England's Global Sum Allocation Formula** (the "Carr-Hill formula," the
-  standard NHS practice-funding formula). We could not obtain and verify
-  its exact published age-sex coefficients, so instead we fit our own
-  weights directly from national staffing data. Checked informally
-  against Mukhtar TK, Bankhead C, Stevens S, Perera R, Holt TA, Salisbury
-  C, Hobbs FDR, "Factors associated with consultation rates in general
-  practice in England, 2013-2014," *Br J Gen Pract* 2018;68(670):e370-e377
-  (a different outcome to what we model here, and not used as a
-  production input) — deprivation terms corroborate closely, age terms
-  diverge notably, an open question rather than a settled one. Doesn't
-  include morbidity, which the literature treats as a further
-  significant, independent driver of need that this pipeline doesn't yet
-  capture.
-- **No per-PCN £ figure for ARRS spend or underspend exists publicly**
-  below ICB level — nothing here should be read as a costed claim.
-- **DNA (Did Not Attend) rate and practice-level detail are tracked but
-  not shown here** — this report is deliberately scoped to the ARRS
-  staffing disclosure only; that detail is available in a follow-up
+- **A question, not a verdict.** Case-mix, coding practice and local
+  context vary in ways this data doesn't capture.
+- **Missing or implausible staffing returns are left out, not counted as
+  zero.** `{r} n_pcns_excluded` PCNs are removed entirely (no ARRS
+  return, or a return too implausible to be one PCN's), as are
+  `{r} fmt_n(n_practices_no_fte)` practices (`{r} fmt_n(list_size_no_fte)`
+  patients) with no GP or direct-patient-care staff return — their
+  patients and staff both. `{r} this_pcn_coverage_sentence`
+- **"Expected" FTE is a national average, not an entitlement.** It's
+  fitted from national data on each PCN's age, sex and deprivation mix.
+  FTE isn't a true count, so the control limits are an approximation.
+- **Our own weights, not the NHS Carr-Hill formula**, whose coefficients
+  we couldn't verify. Deprivation weights agree closely with Mukhtar et
+  al. 2018; age weights don't — an open question. Morbidity isn't
+  included.
+- **No £ figures.** No public source reports ARRS spend below ICB level.
+  Appointment and practice-level detail is available in a follow-up
   conversation.
-- **This report is a first draft**, rendered against one PCN as a test
-  case. Page count, layout, and section order are all still open.

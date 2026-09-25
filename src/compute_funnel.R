@@ -1,22 +1,23 @@
 # Builds the per-PCN table the staffing model and funnel plot both need:
 # population-composition shares (aggregate_pcn.R::pcn_need_composition())
-# joined against actual FTE (practice + ARRS). A handful of PCNs have no
-# rows at all in the PCN Workforce file — ambiguous between "genuinely
-# zero ARRS staff" and "not captured this snapshot". Treated as zero (the
-# conservative read: lower ARRS FTE only makes a PCN look more
-# understaffed, so this can't be quietly assumed) but flagged so it's
-# visible downstream rather than silently folded in.
+# joined against actual FTE (practice + ARRS). PCNs with no rows at all
+# in the PCN Workforce file (arrs_fte NA — see
+# aggregate_pcn.R::pcn_workforce()) are EXCLUDED, both from the model fit
+# and from flagging. An earlier version treated them as zero ARRS staff,
+# but that isn't conservative for a pitch report: it can only make a PCN
+# look more understaffed, and those PCNs clustered among the strongest
+# "understaffed" flags — a missing return presented as a staffing gap.
+# Composition and workforce both arrive already stripped of practices
+# with no reported FTE (aggregate_pcn.R::practices_without_fte()). PCNs
+# in pcn_exclusions.R::manual_pcn_exclusions are dropped here too.
 pcn_staffing_data <- function(pcn_composition, pcn_workforce) {
   pcn_composition |>
     dplyr::inner_join(
       dplyr::select(pcn_workforce, PCN_CODE, practice_fte, arrs_fte),
       by = "PCN_CODE"
     ) |>
-    dplyr::mutate(
-      arrs_fte_missing = is.na(arrs_fte),
-      arrs_fte = dplyr::coalesce(arrs_fte, 0),
-      actual_fte = practice_fte + arrs_fte
-    )
+    dplyr::filter(!is.na(arrs_fte), !PCN_CODE %in% manual_pcn_exclusions$PCN_CODE) |>
+    dplyr::mutate(actual_fte = practice_fte + arrs_fte)
 }
 
 # Fits the staffing need model: actual FTE as a Poisson rate regressed on

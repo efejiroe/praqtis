@@ -50,13 +50,21 @@ filter_pcn_icb <- function(pcn_table, icb_code) {
 # The registration file also publishes ready-made PCN-level totals, but
 # per CLAUDE.md's collate-at-GP-level rule we sum practice-level list
 # sizes ourselves so practice-level drill-down stays possible.
-pcn_list_size <- function(practice_registration, epcn_mapping, primary_icb) {
+#
+# exclude_practices drops named practices from the total — used to build
+# the staffing funnel's list size without practices that report no FTE
+# (see practices_without_fte()), so a PCN's patients and its staff are
+# counted over the same set of practices. Left empty, this is the PCN's
+# full registered list (what the report header quotes).
+pcn_list_size <- function(practice_registration, epcn_mapping, primary_icb,
+                          exclude_practices = character()) {
   practice_list_size <- practice_registration |>
     dplyr::filter(SEX == "ALL", AGE_GROUP_5 == "ALL") |>
     dplyr::select(PRACTICE_CODE = ORG_CODE, list_size = NUMBER_OF_PATIENTS)
 
   pcn_icb_lookup(epcn_mapping) |>
     dplyr::distinct(PRACTICE_CODE, PCN_CODE, PCN_NAME) |>
+    dplyr::filter(!PRACTICE_CODE %in% exclude_practices) |>
     dplyr::inner_join(practice_list_size, by = "PRACTICE_CODE") |>
     dplyr::group_by(PCN_CODE, PCN_NAME) |>
     dplyr::summarise(list_size = sum(list_size, na.rm = TRUE), .groups = "drop") |>
@@ -87,10 +95,20 @@ pcn_imd <- function(practice_imd, practice_registration, epcn_mapping, primary_i
 
 # Practice-level GP+DPC FTE summed to PCN, alongside PCN-employed (mostly
 # ARRS) FTE — the two raw ingredients of a PCN's actual staffing total,
-# not yet combined (see compute_funnel.R).
-pcn_workforce <- function(practice_gp_workforce, pcn_arrs_workforce, epcn_mapping, primary_icb) {
+# not yet combined (see compute_funnel.R). exclude_practices mirrors
+# pcn_list_size(): practices with no reported FTE are dropped explicitly
+# rather than contributing a silent zero.
+#
+# arrs_fte is left NA (not zero) for PCNs with no rows in the PCN
+# Workforce file — NHS England Digital's PCN Workforce return doesn't
+# distinguish "no ARRS staff" from "not submitted", and every one of
+# those PCN codes does exist in the ePCN mapping, so it isn't a code
+# mismatch. compute_funnel.R::pcn_staffing_data() excludes them.
+pcn_workforce <- function(practice_gp_workforce, pcn_arrs_workforce, epcn_mapping, primary_icb,
+                          exclude_practices = character()) {
   practice_fte_by_pcn <- pcn_icb_lookup(epcn_mapping) |>
     dplyr::distinct(PRACTICE_CODE, PCN_CODE, PCN_NAME) |>
+    dplyr::filter(!PRACTICE_CODE %in% exclude_practices) |>
     dplyr::inner_join(practice_gp_workforce, by = "PRACTICE_CODE") |>
     dplyr::group_by(PCN_CODE, PCN_NAME) |>
     dplyr::summarise(practice_fte = sum(practice_fte, na.rm = TRUE), .groups = "drop")
@@ -206,8 +224,15 @@ wide_pivot_sum <- function(df, key_col, key_values, value_col, prefix) {
 # Reference categories (age 15-64, male, IMD quintile 1) are deliberately
 # left out of the share columns; they're captured by the regression's
 # intercept, not by a share of their own.
-pcn_need_composition <- function(practice_need_bands, practice_imd_quintile, pcn_list_size, epcn_mapping) {
-  practice_pcn <- pcn_icb_lookup(epcn_mapping) |> dplyr::distinct(PRACTICE_CODE, PCN_CODE)
+#
+# exclude_practices (and a pcn_list_size built with the same exclusions)
+# keep the composition consistent with the FTE side — see
+# practices_without_fte().
+pcn_need_composition <- function(practice_need_bands, practice_imd_quintile, pcn_list_size, epcn_mapping,
+                                 exclude_practices = character()) {
+  practice_pcn <- pcn_icb_lookup(epcn_mapping) |>
+    dplyr::distinct(PRACTICE_CODE, PCN_CODE) |>
+    dplyr::filter(!PRACTICE_CODE %in% exclude_practices)
 
   coarse_band_lookup <- c(
     "under_5" = "under_15", "5_14" = "under_15",
@@ -297,9 +322,16 @@ pcn_dna_rate <- function(practice_dna_rate, epcn_mapping, primary_icb) {
 
 # Practice-level staffing snapshot: list size + practice/DPC FTE (EXCLUDES
 # ARRS — genuinely PCN-native, no practice-level equivalent, see
-# pcn_workforce()). Needed for practice_pcn_drilldown() below. Parallel
-# in style to practice_need_bands()/practice_imd_quintile() — a plain
-# national-scale practice-level table, not yet PCN-filtered.
+# pcn_workforce()). Feeds practice_pcn_drilldown() below and
+# practices_without_fte(). Parallel in style to
+# practice_need_bands()/practice_imd_quintile() — a plain national-scale
+# practice-level table, not yet PCN-filtered.
+#
+# fte_reported is FALSE where a registered practice is absent from the
+# practice workforce file or reports exactly 0 GP+DPC FTE. A practice
+# with registered patients and no GP or direct-patient-care staff at all
+# can't be real, so both cases are read as a missing return, not a
+# genuine zero — practice_fte is left NA rather than coalesced to 0.
 practice_staffing_snapshot <- function(practice_registration, practice_gp_workforce) {
   practice_list_size <- practice_registration |>
     dplyr::filter(SEX == "ALL", AGE_GROUP_5 == "ALL") |>
@@ -308,9 +340,37 @@ practice_staffing_snapshot <- function(practice_registration, practice_gp_workfo
   practice_list_size |>
     dplyr::left_join(practice_gp_workforce, by = "PRACTICE_CODE") |>
     dplyr::mutate(
-      practice_fte = dplyr::coalesce(practice_fte, 0),
+      fte_reported = !is.na(practice_fte) & practice_fte > 0,
+      practice_fte = dplyr::if_else(fte_reported, practice_fte, NA_real_),
       practice_fte_per_1k_patients = 1000 * practice_fte / list_size
     )
+}
+
+# Practice codes with no usable FTE return (see
+# practice_staffing_snapshot()). These practices are left out of BOTH
+# sides of the staffing funnel — their patients as well as their (absent)
+# staff — so the PCN is compared on the practices that did report.
+# Keeping their patients while counting zero staff would make the PCN
+# look understaffed purely because of a missing return.
+practices_without_fte <- function(practice_staffing_snapshot) {
+  practice_staffing_snapshot$PRACTICE_CODE[!practice_staffing_snapshot$fte_reported]
+}
+
+# Per-PCN count of practices (and registered patients) left out of the
+# staffing funnel by practices_without_fte(), so the report can disclose
+# it for the PCN it's rendered for.
+pcn_fte_coverage <- function(practice_staffing_snapshot, epcn_mapping, primary_icb) {
+  pcn_icb_lookup(epcn_mapping) |>
+    dplyr::distinct(PRACTICE_CODE, PCN_CODE) |>
+    dplyr::inner_join(practice_staffing_snapshot, by = "PRACTICE_CODE") |>
+    dplyr::group_by(PCN_CODE) |>
+    dplyr::summarise(
+      n_practices = dplyr::n(),
+      n_practices_no_fte = sum(!fte_reported),
+      list_size_no_fte = sum(list_size[!fte_reported], na.rm = TRUE),
+      .groups = "drop"
+    ) |>
+    dplyr::inner_join(dplyr::select(primary_icb, PCN_CODE, ICB_CODE), by = "PCN_CODE")
 }
 
 # Practice-level drill-down for one PCN: each constituent practice's
@@ -340,15 +400,19 @@ practice_pcn_drilldown <- function(pcn_code, epcn_mapping,
     dplyr::left_join(practice_staffing_snapshot, by = "PRACTICE_CODE") |>
     dplyr::left_join(practice_dna_rate, by = "PRACTICE_CODE")
 
-  pcn_list_size_total <- sum(detail$list_size, na.rm = TRUE)
-  pcn_practice_fte_total <- sum(detail$practice_fte, na.rm = TRUE)
+  # Staffing totals span only practices that reported FTE, so a practice
+  # with a missing return doesn't drag down "the rest of the PCN"; its
+  # own intensity comes out NA rather than a misleading 0.
+  reported <- detail$fte_reported %in% TRUE
+  pcn_list_size_total <- sum(detail$list_size[reported], na.rm = TRUE)
+  pcn_practice_fte_total <- sum(detail$practice_fte[reported], na.rm = TRUE)
   pcn_dna_count_total <- sum(detail$dna_count, na.rm = TRUE)
   pcn_attended_count_total <- sum(detail$attended_count, na.rm = TRUE)
 
   detail |>
     dplyr::mutate(
-      rest_list_size = pcn_list_size_total - list_size,
-      rest_practice_fte = pcn_practice_fte_total - practice_fte,
+      rest_list_size = pcn_list_size_total - dplyr::if_else(reported, list_size, 0),
+      rest_practice_fte = pcn_practice_fte_total - dplyr::coalesce(practice_fte, 0),
       rest_practice_fte_per_1k_patients = 1000 * rest_practice_fte / rest_list_size,
       staffing_intensity_gap_pct = 100 * (practice_fte_per_1k_patients -
         rest_practice_fte_per_1k_patients) / rest_practice_fte_per_1k_patients,

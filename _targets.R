@@ -28,10 +28,31 @@ list(
     national_pcn_imd,
     pcn_imd(practice_imd, practice_registration, epcn_mapping, national_pcn_primary_icb)
   ),
+
+  # Practices with no usable FTE return are dropped from both the patient
+  # and the staff side of the staffing funnel (see aggregate_pcn.R::
+  # practices_without_fte()); national_pcn_list_size above stays the full
+  # registered list for the report header.
+  tar_target(
+    national_practices_without_fte,
+    practices_without_fte(national_practice_staffing_snapshot)
+  ),
+  tar_target(
+    national_pcn_fte_coverage,
+    pcn_fte_coverage(national_practice_staffing_snapshot, epcn_mapping, national_pcn_primary_icb)
+  ),
+  tar_target(
+    national_pcn_list_size_fte_reported,
+    pcn_list_size(
+      practice_registration, epcn_mapping, national_pcn_primary_icb,
+      exclude_practices = national_practices_without_fte
+    )
+  ),
   tar_target(
     national_pcn_workforce,
     pcn_workforce(
-      practice_gp_workforce, pcn_arrs_workforce, epcn_mapping, national_pcn_primary_icb
+      practice_gp_workforce, pcn_arrs_workforce, epcn_mapping, national_pcn_primary_icb,
+      exclude_practices = national_practices_without_fte
     )
   ),
   tar_target(
@@ -46,7 +67,8 @@ list(
     national_pcn_composition,
     pcn_need_composition(
       national_practice_need_bands, national_practice_imd_quintile,
-      national_pcn_list_size, epcn_mapping
+      national_pcn_list_size_fte_reported, epcn_mapping,
+      exclude_practices = national_practices_without_fte
     )
   ),
 
@@ -84,6 +106,15 @@ list(
   tar_target(
     national_staffing_gap,
     staffing_gap_benchmarks(national_staffing_funnel_flags)
+  ),
+  tar_target(
+    national_pcn_exclusions,
+    pcn_exclusion_list(national_pcn_workforce, national_pcn_fte_coverage, national_pcn_list_size)
+  ),
+  tar_target(
+    pcn_exclusions_md,
+    write_pcn_exclusions_md(national_pcn_exclusions, "docs/pcn_exclusions.md"),
+    format = "file"
   ),
   tar_target(
     national_staffing_model_comparison,
