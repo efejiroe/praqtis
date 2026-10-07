@@ -1,23 +1,32 @@
 # Builds the per-PCN table the staffing model and funnel plot both need:
 # population-composition shares (aggregate_pcn.R::pcn_need_composition())
-# joined against actual FTE (practice + ARRS). PCNs with no rows at all
-# in the PCN Workforce file (arrs_fte NA — see
+# joined against actual FTE — ARRS-eligible roles ONLY (see
+# fetch_workforce.R::read_arrs_roles()). The report is about ARRS because
+# that's the funded budget a PCN itself controls; practice GPs, nurses
+# and admin aren't counted. `actual_fte` is kept as the column name so
+# the funnel and gap tables downstream don't change shape.
+#
+# PCNs with no rows at all in the PCN Workforce file (arrs_fte NA — see
 # aggregate_pcn.R::pcn_workforce()) are EXCLUDED, both from the model fit
 # and from flagging. An earlier version treated them as zero ARRS staff,
 # but that isn't conservative for a pitch report: it can only make a PCN
 # look more understaffed, and those PCNs clustered among the strongest
 # "understaffed" flags — a missing return presented as a staffing gap.
-# Composition and workforce both arrive already stripped of practices
-# with no reported FTE (aggregate_pcn.R::practices_without_fte()). PCNs
-# in pcn_exclusions.R::manual_pcn_exclusions are dropped here too.
+# The same goes for a return with zero ARRS-eligible FTE (arrs_fte == 0):
+# in the June 2026 file those PCNs reported only a Clinical Director
+# and/or admin while serving populations expecting 9-32 ARRS FTE, which
+# reads as ARRS staff recorded elsewhere (e.g. under a lead practice),
+# not as a PCN with no ARRS staff. PCNs reporting a little ARRS FTE stay
+# in: that can't be told apart from genuinely low staffing.
+# PCNs in pcn_exclusions.R::manual_pcn_exclusions are dropped here too.
 pcn_staffing_data <- function(pcn_composition, pcn_workforce) {
   pcn_composition |>
-    dplyr::inner_join(
-      dplyr::select(pcn_workforce, PCN_CODE, practice_fte, arrs_fte),
-      by = "PCN_CODE"
+    dplyr::inner_join(dplyr::select(pcn_workforce, PCN_CODE, arrs_fte), by = "PCN_CODE") |>
+    dplyr::filter(
+      !is.na(arrs_fte), arrs_fte > 0,
+      !PCN_CODE %in% manual_pcn_exclusions$PCN_CODE
     ) |>
-    dplyr::filter(!is.na(arrs_fte), !PCN_CODE %in% manual_pcn_exclusions$PCN_CODE) |>
-    dplyr::mutate(actual_fte = practice_fte + arrs_fte)
+    dplyr::mutate(actual_fte = arrs_fte)
 }
 
 # Fits the staffing need model: actual FTE as a Poisson rate regressed on
@@ -128,8 +137,8 @@ national_staffing_funnel <- function(national_staffing_model, national_pcn_compo
 #     limits narrow with PCN size, so this one varies per PCN)
 #   - lower-quartile / median PCN: national quantiles of staffing ratio
 #   - exactly as expected: 100%
-# FTE spans every staff group in actual_fte (GP, direct patient care and
-# ARRS), not ARRS alone, and is not a headcount — many posts are part-time.
+# FTE is ARRS-eligible roles only (see pcn_staffing_data()) and is not a
+# headcount — many posts are part-time.
 # Framed as a comparison with peers, never as a staffing requirement:
 # "expected" is what PCNs with a similar population typically have, not
 # what patients need.
@@ -152,6 +161,32 @@ staffing_gap_benchmarks <- function(national_staffing_funnel_flags) {
       gap_fte = round(target_fte - actual_fte, 1)
     ) |>
     dplyr::select(PCN_CODE, benchmark, target_ratio_pct, actual_fte, target_fte, gap_fte)
+}
+
+# ARRS FTE per 10,000 registered patients, by role, for every PCN in the
+# funnel, beside the national median for that role — the report's "which
+# roles?" view, answering a reviewer's question about WHICH staff are
+# short, not just how many. Deliberately descriptive, with no modelling:
+# ARRS doesn't prescribe a role mix, so a PCN below the median for one
+# role may have chosen another instead; this shows the mix, it doesn't
+# score it. The grid is zero-filled so a PCN with none of a role counts
+# as 0 in that role's median, not as missing. Medians are over PCNs in
+# the funnel only, so excluded PCNs don't skew them.
+arrs_role_benchmarks <- function(pcn_arrs_role_fte, pcn_list_size, national_staffing_funnel_flags) {
+  pcns <- dplyr::filter(pcn_list_size, PCN_CODE %in% national_staffing_funnel_flags$PCN_CODE) |>
+    dplyr::select(PCN_CODE, list_size)
+  roles <- dplyr::distinct(pcn_arrs_role_fte, report_role)
+
+  dplyr::cross_join(pcns, roles) |>
+    dplyr::left_join(pcn_arrs_role_fte, by = c("PCN_CODE", "report_role")) |>
+    dplyr::mutate(
+      fte = dplyr::coalesce(fte, 0),
+      fte_per_10k = 10000 * fte / list_size
+    ) |>
+    dplyr::group_by(report_role) |>
+    dplyr::mutate(national_median_per_10k = stats::median(fte_per_10k)) |>
+    dplyr::ungroup() |>
+    dplyr::select(PCN_CODE, report_role, fte, fte_per_10k, national_median_per_10k)
 }
 
 # Published rate ratios from:
@@ -233,9 +268,11 @@ mukhtar_implied_coarse_age_rr <- function(national_practice_need_bands) {
 #
 # Our coefficients are estimated on PCN-level population *composition
 # shares* (an ecological/aggregate regression: what population mix
-# predicts total PCN staffing), not on individual patients like
+# predicts PCN ARRS staffing), not on individual patients like
 # Mukhtar's (what predicts one patient's own consultation rate) -- the
-# two aren't mathematically identical even in the best case, so a
+# two aren't mathematically identical even in the best case, and ARRS
+# staffing is a further step removed from consultations than total
+# staffing was (ARRS also reflects each PCN's own hiring choices), so a
 # corroborating match is reassuring, not proof, and a mismatch isn't
 # necessarily wrong, just worth understanding before trusting either
 # figure too far. Stated here as an assumption, not fact, per CLAUDE.md.

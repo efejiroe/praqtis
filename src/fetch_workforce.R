@@ -25,12 +25,14 @@ fetch_practice_gp_workforce <- function(dest_dir = "dat/in") {
     dplyr::summarise(practice_fte = sum(VALUE, na.rm = TRUE), .groups = "drop")
 }
 
-# PCN-employed staff FTE, individual-level. PCNs directly employ almost
-# exclusively ARRS-funded roles, so this is the "ARRS FTE already in post"
-# term in the staffing funnel check's actual-FTE figure — see the
-# corrected formula note in ref/concept_note.md (no PCN-level ARRS *spend* is
-# publicly available, only FTE/headcount).
-fetch_pcn_arrs_workforce <- function(dest_dir = "dat/in") {
+# PCN-employed staff FTE by role, from the individual-level PCN Workforce
+# file. This is EVERY role a PCN employs — Clinical Directors, managers
+# and admin as well as ARRS roles — so it's kept at role level here and
+# filtered to ARRS-eligible roles downstream (aggregate_pcn.R::
+# pcn_arrs_role_fte(), using read_arrs_roles() below). Summing it whole,
+# as an earlier version did, overstated ARRS FTE. No PCN-level ARRS
+# *spend* is publicly available, only FTE/headcount.
+fetch_pcn_workforce_roles <- function(dest_dir = "dat/in") {
   zip_path <- download_and_cache_zip(
     "https://files.digital.nhs.uk/A8/E524AA/PCNWFIndividualCSV.062026.zip",
     "PCNWFIndividualCSV.062026.zip",
@@ -38,6 +40,22 @@ fetch_pcn_arrs_workforce <- function(dest_dir = "dat/in") {
   )
   csv_name <- "1.Primary Care Networks - June 2026 Individual Level.csv"
   readr::read_csv(unz(zip_path, csv_name), show_col_types = FALSE) |>
-    dplyr::group_by(PCN_CODE, ICB_CODE) |>
-    dplyr::summarise(arrs_fte = sum(FTE, na.rm = TRUE), .groups = "drop")
+    dplyr::group_by(PCN_CODE, ICB_CODE, STAFF_ROLE, DETAILED_STAFF_ROLE) |>
+    dplyr::summarise(fte = sum(FTE, na.rm = TRUE), .groups = "drop")
+}
+
+# Which PCN Workforce roles ARRS can reimburse, mapped by hand from NHS
+# England's Network Contract DES specification 2026/27 (PRN02483: Table 2,
+# sections 7.3.3-7.3.9 and Annex B) — see dat/in/MANIFEST.md. Only roles
+# the specification names are TRUE. Roles a PCN can fund through ARRS
+# only with its commissioner's agreement (7.3.2-A/C: e.g. managers,
+# admin, "other" nurses) are left out, because no public source records
+# which of those posts were agreed. Roles absent from the CSV count as
+# not ARRS. Keyed on STAFF_ROLE + DETAILED_STAFF_ROLE because some roles
+# (Therapists, Apprentices, Salaried GPs) split into ARRS and non-ARRS
+# at the detailed level.
+read_arrs_roles <- function(path) {
+  readr::read_csv(path, show_col_types = FALSE) |>
+    dplyr::filter(is_arrs) |>
+    dplyr::select(STAFF_ROLE, DETAILED_STAFF_ROLE, report_role)
 }

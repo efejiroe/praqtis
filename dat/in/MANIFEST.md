@@ -49,6 +49,24 @@ the vintage the file itself claims to be.
 - **Downloaded**: 2026-08-07
 - **Vintage**: 30 June 2026 snapshot
 
+## arrs_roles.csv
+
+- **Source**: hand-built lookup, mapping each PCN Workforce `STAFF_ROLE` /
+  `DETAILED_STAFF_ROLE` to ARRS-reimbursable or not, from NHS England,
+  "Network Contract DES: Contract specification 2026/27 – PCN requirements
+  and entitlements" (publication reference PRN02483): Table 2 (maximum
+  reimbursement per role), sections 7.3.2–7.3.9 and Annex B
+  https://www.england.nhs.uk/wp-content/uploads/2026/03/network-contract-des-contract-specification-2026-27.pdf
+- **Downloaded**: 2026-10-07 (specification read and the mapping made that day)
+- **Vintage**: 2026/27 contract year (1 April 2026 – 31 March 2027)
+- **Rules**: a role is ARRS only if the specification names it (`spec_ref`
+  column cites where). Clinical Directors are paid from Core PCN Funding
+  (Table 1), so are not ARRS. Roles fundable only with commissioner
+  agreement (7.3.2-A/C, e.g. managers, admin, "other" nurses) are not
+  counted, because no public source records which posts were agreed.
+  Roles missing from the CSV count as not ARRS — re-check the CSV against
+  any new PCN Workforce vintage for new role names.
+
 ## Practice_Level_Crosstab_Jun_26.zip
 
 - **Source**: NHS England Digital, "Appointments in General Practice"
@@ -106,14 +124,22 @@ the vintage the file itself claims to be.
   precedent elsewhere in this pipeline.
 - 26 ePCN-mapped practices (66,330 registered patients, June 2026) are
   either absent from the practice workforce file or report exactly 0 GP +
-  Direct Patient Care FTE. A practice with registered patients and no
-  clinical staff can't be real, so both are read as a missing return:
-  `practices_without_fte()` in `src/aggregate_pcn.R` removes those
-  practices' patients AND staff from the staffing funnel, rather than
-  counting zero staff against a full list.
+  Direct Patient Care FTE. This used to remove those practices from the
+  staffing funnel; since the funnel became ARRS-only (2026-10-07) it no
+  longer matters, because ARRS staff serve the whole PCN and practice
+  returns aren't counted. Still relevant to the internal practice
+  drill-down (`practice_staffing_snapshot()`'s `fte_reported` flag).
 - 27 PCNs have no rows in the PCN Workforce (ARRS) file. All 27 codes
   exist in the ePCN mapping, so this isn't a code mismatch — but the
   file can't distinguish "no ARRS staff" from "not submitted". These
   PCNs are excluded from the funnel (`pcn_staffing_data()` in
   `src/compute_funnel.R`) rather than treated as zero ARRS FTE, which
   had made them look strongly understaffed purely because of missing data.
+- 5 PCNs filed a PCN Workforce return listing no ARRS-eligible roles —
+  only a Clinical Director and/or admin — while their populations predict
+  9–32 ARRS FTE (June 2026). Read as ARRS staff recorded elsewhere (e.g.
+  under a lead practice), not as none, so they are excluded alongside the
+  no-return PCNs. North Lewisham PCN (U53896) reports ARRS staff but no
+  pharmacists or pharmacy technicians, and its practices' own pharmacy
+  rows are blank — possibly the same issue for one role; not excluded,
+  but not used as a report example either.

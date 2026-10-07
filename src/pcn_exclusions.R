@@ -2,8 +2,7 @@
 # which PCNs (or which of their practices) are left out, and why.
 # Two kinds:
 #   - rule-based, derived from the data each build: PCNs with no PCN
-#     Workforce (ARRS) return, and practices with no usable FTE return
-#     (see aggregate_pcn.R::practices_without_fte())
+#     Workforce (ARRS) return
 #   - manual, listed below with the evidence for each — a PCN whose
 #     return is present but implausible enough that comparing it would
 #     mislead. Add one only with evidence checked against the source file,
@@ -22,8 +21,10 @@ manual_pcn_exclusions <- tibble::tribble(
   )
 )
 
-# Every excluded PCN, full or partial, with its reason.
-pcn_exclusion_list <- function(pcn_workforce, pcn_fte_coverage, pcn_list_size) {
+# Every excluded PCN, with its reason. Practices with no GP/DPC FTE
+# return used to be listed here too, but the funnel counts ARRS staff
+# only, so a missing practice return no longer affects any comparison.
+pcn_exclusion_list <- function(pcn_workforce, pcn_list_size) {
   labels <- dplyr::select(pcn_list_size, PCN_CODE, PCN_NAME, ICB_NAME)
 
   no_arrs <- pcn_workforce |>
@@ -33,28 +34,23 @@ pcn_exclusion_list <- function(pcn_workforce, pcn_fte_coverage, pcn_list_size) {
       reason = "No rows in the PCN Workforce (ARRS) return — can't tell zero ARRS staff from a missing submission."
     )
 
-  manual <- dplyr::mutate(manual_pcn_exclusions, scope = "Whole PCN")
-
-  practices <- pcn_fte_coverage |>
-    dplyr::filter(n_practices_no_fte > 0) |>
+  no_arrs_roles <- pcn_workforce |>
+    dplyr::filter(arrs_fte == 0) |>
     dplyr::transmute(
-      PCN_CODE, scope = "Some practices",
-      reason = sprintf(
-        "%d of %d practices (%s patients) have no GP/direct-patient-care FTE return; those practices' patients and staff are left out.",
-        n_practices_no_fte, n_practices, format(list_size_no_fte, big.mark = ",")
-      )
+      PCN_CODE, scope = "Whole PCN",
+      reason = "PCN Workforce return lists no ARRS-eligible roles (only a Clinical Director and/or admin) — reads as ARRS staff recorded elsewhere, not none."
     )
 
-  dplyr::bind_rows(no_arrs, manual, practices) |>
+  manual <- dplyr::mutate(manual_pcn_exclusions, scope = "Whole PCN")
+
+  dplyr::bind_rows(no_arrs, no_arrs_roles, manual) |>
     dplyr::inner_join(labels, by = "PCN_CODE") |>
     dplyr::select(PCN_CODE, PCN_NAME, ICB_NAME, scope, reason) |>
-    dplyr::arrange(dplyr::desc(scope == "Whole PCN"), PCN_NAME)
+    dplyr::arrange(PCN_NAME)
 }
 
 write_pcn_exclusions_md <- function(pcn_exclusions, path = "docs/pcn_exclusions.md") {
   dir.create(dirname(path), showWarnings = FALSE, recursive = TRUE)
-  whole <- dplyr::filter(pcn_exclusions, scope == "Whole PCN")
-  partial <- dplyr::filter(pcn_exclusions, scope == "Some practices")
   md_table <- function(df) {
     c("| PCN code | PCN | ICB | Reason |", "|---|---|---|---|",
       sprintf("| %s | %s | %s | %s |", df$PCN_CODE, df$PCN_NAME, df$ICB_NAME, df$reason))
@@ -67,13 +63,9 @@ write_pcn_exclusions_md <- function(pcn_exclusions, path = "docs/pcn_exclusions.
     "`targets::tar_make()` — do not edit by hand. Rule-based exclusions come from",
     "the data; manual ones are listed, with evidence, in `manual_pcn_exclusions`.",
     "",
-    sprintf("## Whole PCN left out (%d)", nrow(whole)),
+    sprintf("## PCNs left out (%d)", nrow(pcn_exclusions)),
     "",
-    md_table(whole),
-    "",
-    sprintf("## Some practices left out, PCN still compared (%d)", nrow(partial)),
-    "",
-    md_table(partial)
+    md_table(pcn_exclusions)
   ), path)
   path
 }

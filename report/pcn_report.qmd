@@ -7,7 +7,7 @@ format:
       x: 1.8cm
       y: 1.6cm
 params:
-  pcn_code: "U24992" # Heritage PCN — test case; sits on the edge of the 95% band (within range as of the June 2026 build)
+  pcn_code: "U98580" # Hayes Wick PCN (SEL) — below the 99.8% band on ARRS-only staffing, June 2026 build
 ---
 
 ```{r}
@@ -32,7 +32,7 @@ national_pcn_primary_icb <- tr("national_pcn_primary_icb")
 national_pcn_workforce <- tr("national_pcn_workforce")
 national_staffing_funnel_flags <- tr("national_staffing_funnel_flags")
 national_staffing_gap <- tr("national_staffing_gap")
-national_pcn_fte_coverage <- tr("national_pcn_fte_coverage")
+national_arrs_role_benchmarks <- tr("national_arrs_role_benchmarks")
 national_pcn_exclusions <- tr("national_pcn_exclusions")
 
 pcn_code <- params$pcn_code
@@ -43,7 +43,6 @@ icb_name <- filter(national_pcn_primary_icb, PCN_CODE == pcn_code)$ICB_NAME
 list_size_row <- filter(national_pcn_list_size, PCN_CODE == pcn_code)
 workforce_row <- filter(national_pcn_workforce, PCN_CODE == pcn_code)
 funnel_row <- filter(national_staffing_funnel_flags, PCN_CODE == pcn_code)
-coverage_row <- filter(national_pcn_fte_coverage, PCN_CODE == pcn_code)
 
 # PCNs with no ARRS return are left out of the funnel entirely (see
 # compute_funnel.R::pcn_staffing_data()) — there's no staffing comparison
@@ -53,25 +52,8 @@ if (nrow(funnel_row) == 0) {
        "docs/pcn_exclusions.md) — no report to render.")
 }
 
-# Data-coverage figures for the Limitations section.
-n_pcns_excluded <- sum(national_pcn_exclusions$scope == "Whole PCN")
-n_practices_no_fte <- sum(national_pcn_fte_coverage$n_practices_no_fte)
-list_size_no_fte <- sum(national_pcn_fte_coverage$list_size_no_fte)
-this_pcn_no_fte <- coverage_row$n_practices_no_fte
-fmt_n <- function(x) format(x, big.mark = ",")
-
-this_pcn_coverage_sentence <- if (this_pcn_no_fte > 0) {
-  sprintf(
-    "For %s, %d of its %d practices (%s patients) had no return and %s left out, so its comparison covers the remaining %s patients.",
-    pcn_name, this_pcn_no_fte, coverage_row$n_practices,
-    if (this_pcn_no_fte == 1) "is" else "are",
-    fmt_n(coverage_row$list_size_no_fte),
-    fmt_n(list_size_row$list_size - coverage_row$list_size_no_fte)
-  )
-} else {
-  sprintf("All %d of %s's practices reported staffing.",
-          coverage_row$n_practices, pcn_name)
-}
+# Exclusion count for the Limitations section.
+n_pcns_excluded <- nrow(national_pcn_exclusions)
 
 # The headline claim a PCN is identified because its staffing is a
 # statistical outlier, not because it happens to rank highest — so the
@@ -130,7 +112,7 @@ pct1 <- function(x) sprintf("%.1f%%", x)
 
 cat("::: {.callout-important appearance=\"simple\"}\n\n")
 cat(sprintf(
-  "**%s is staffed at %.0f%% of what its age profile and deprivation predict.** %.1f FTE in post against an expected %.1f FTE, benchmarked against every PCN in England (Spiegelhalter funnel plot — see below). %s\n\n",
+  "**%s has %.0f%% of the ARRS staff we would expect for its patients.** %.1f full-time-equivalent (FTE) ARRS staff in post, against an expected %.1f FTE, compared with every PCN in England (see below). %s\n\n",
   pcn_name, funnel_row$staffing_ratio_pct, funnel_row$actual_fte, funnel_row$expected_fte,
   flag_sentence
 ))
@@ -141,17 +123,24 @@ cat(":::\n")
 
 | Metric | This PCN | What it means |
 |---|---|---|
-| Staffing vs. expected need | `{r} sprintf("%.0f%%", funnel_row$staffing_ratio_pct)` (`{r} gsub("_", " ", funnel_row$funnel_flag)`) | Actual FTE against what the PCN's age profile and deprivation predict, benchmarked nationally — a PCN is flagged for being a statistical outlier, not for topping a ranking |
-| ARRS FTE currently in post | `{r} sprintf("%.1f", workforce_row$arrs_fte)` | Additional-roles staff already funded and working in this PCN |
+| ARRS staff vs. expected | `{r} sprintf("%.0f%%", funnel_row$staffing_ratio_pct)` (`{r} gsub("_", " ", funnel_row$funnel_flag)`) | ARRS staff in post, as a share of what PCNs serving similar patients typically have |
+| ARRS FTE in post | `{r} sprintf("%.1f", workforce_row$arrs_fte)` | Staff the PCN employs in roles the Additional Roles Reimbursement Scheme (ARRS) can fund |
 
 ## Is this staffing gap real, or just noise?
+
+We estimate how many ARRS staff a PCN would typically have, given how many
+patients it serves, how old they are and how deprived the area is. We then
+compare `{r} pcn_name`'s actual ARRS staff with that estimate, alongside
+every other PCN in England. Small PCNs naturally vary more, so the normal
+range (the funnel) is wider for them and narrows as PCNs get bigger. A PCN
+outside it is unlikely to be there by chance.
 
 ```{r}
 #| label: fig-staffing-funnel
 #| echo: false
 #| fig-width: 6.4
-#| fig-height: 3.6
-#| fig-cap: !expr paste0("Actual vs. expected FTE across all ", nrow(national_staffing_funnel_flags), " PCNs nationally (Spiegelhalter overdispersion-adjusted control limits). ", pcn_name, " marked in blue.")
+#| fig-height: 3.1
+#| fig-cap: !expr paste0("Each dot is one of ", nrow(national_staffing_funnel_flags), " PCNs in England. The solid line marks as expected, dashed lines the 95% normal range and dotted lines the 99.8% range. ", pcn_name, " is marked in blue.")
 
 funnel_data <- national_staffing_funnel_flags |>
   mutate(is_this_pcn = PCN_CODE == pcn_code)
@@ -165,6 +154,7 @@ x_mid_log <- mean(log10(range(funnel_data$expected_fte)))
 label_hjust <- if (log10(this_row$expected_fte) > x_mid_log) 1.1 else -0.1
 
 ggplot(funnel_data, aes(x = expected_fte, y = staffing_ratio_pct)) +
+  geom_hline(yintercept = 100, colour = col_ink_muted, linewidth = 0.3) +
   geom_hline(yintercept = this_row$od95_lower_pct, colour = col_ink_muted, linetype = "dashed", linewidth = 0.3) +
   geom_hline(yintercept = this_row$od95_upper_pct, colour = col_ink_muted, linetype = "dashed", linewidth = 0.3) +
   geom_hline(yintercept = this_row$od99_8_lower_pct, colour = col_ink_muted, linetype = "dotted", linewidth = 0.3) +
@@ -180,26 +170,19 @@ ggplot(funnel_data, aes(x = expected_fte, y = staffing_ratio_pct)) +
     labels = scales::label_number(scale_cut = scales::cut_short_scale()),
     expand = expansion(mult = c(0.12, 0.12))
   ) +
+  labs(
+    x = "Expected ARRS FTE, given the PCN's patients (log scale)",
+    y = "ARRS FTE in post, % of expected"
+  ) +
   chart_theme +
-  theme(axis.text = element_text(colour = col_ink_muted, size = 7.5))
+  theme(axis.title = element_text(colour = col_ink_secondary, size = 7.5))
 ```
 
-Dashed lines mark the 95% control band, dotted lines the 99.8% band — both
-computed nationally, so a PCN isn't flagged just because it's small and its
-staffing ratio is noisy. "Expected" FTE reflects two things about this PCN's
-own registered population: its age profile (patients under 15, 15–64, and
-65+ each carry a different national-average staffing rate, since older
-patients are well established to need more GP time) and its deprivation
-profile — a standard indirect-standardisation approach (Spiegelhalter DJ,
-"Funnel plots for comparing institutional performance," *Statistics in
-Medicine* 2005;24(8):1185-1202). It doesn't need a peer group to make its
-point: `{r} pcn_name` is plotted against every PCN in England, on the same
-measure, with nothing else mixed in.
-
-This model uses current (2026) national staffing and population data, and
-its expected-staffing weights have been checked against peer-reviewed
-academic research on GP consultation patterns (Mukhtar et al. 2018, *Br J
-Gen Pract*, DOI 10.3399/bjgp18X695981).
+The normal range follows Spiegelhalter's standard funnel-plot method
+(Spiegelhalter DJ, "Funnel plots for comparing institutional performance,"
+*Statistics in Medicine* 2005;24(8):1185-1202). The expected figure comes
+from a model fitted to June 2026 staffing and population data for every PCN
+in England.
 
 ## How far is this from similar PCNs?
 
@@ -208,7 +191,7 @@ Gen Pract*, DOI 10.3399/bjgp18X695981).
 #| echo: false
 #| fig-width: 6.4
 #| fig-height: 1.9
-#| fig-cap: !expr paste0("How many more full-time-equivalent (FTE) staff ", pcn_name, " would have if it matched each national reference point. FTE covers all staff groups (GPs, direct patient care and ARRS roles). It is not a headcount, because many posts are part-time. Targets compare this PCN with PCNs that have a similar population; they are not a staffing requirement.")
+#| fig-cap: !expr paste0("How many more ARRS staff (FTE) ", pcn_name, " would have if it matched each national reference point. FTE is not a headcount, because many posts are part-time. Targets compare this PCN with PCNs that have similar patients; they are not a staffing requirement.")
 
 gap_data <- filter(national_staffing_gap, PCN_CODE == pcn_code) |>
   mutate(
@@ -236,27 +219,66 @@ ggplot(gap_data, aes(y = benchmark)) +
   ) +
   scale_x_continuous(expand = expansion(mult = c(0.05, 0.02))) +
   coord_cartesian(xlim = c(NA, x_max * 1.22), clip = "off") +
+  labs(x = "ARRS FTE") +
   chart_theme +
-  theme(panel.grid.major.y = element_blank())
+  theme(
+    panel.grid.major.y = element_blank(),
+    axis.title.x = element_text(colour = col_ink_secondary, size = 7.5)
+  )
+```
+
+## Which ARRS roles?
+
+```{r}
+#| label: fig-arrs-roles
+#| echo: false
+#| fig-width: 6.4
+#| fig-height: 2.5
+#| fig-cap: !expr paste0("ARRS staff (FTE) per 10,000 registered patients in each role, for ", pcn_name, " and for the typical (median) PCN in England. Roles that neither has are not shown. ARRS lets each PCN choose its own mix, so a lower figure in one role may reflect a choice, not a gap.")
+
+role_data <- filter(national_arrs_role_benchmarks, PCN_CODE == pcn_code) |>
+  filter(fte_per_10k > 0 | national_median_per_10k > 0) |>
+  mutate(report_role = reorder(report_role, pmax(fte_per_10k, national_median_per_10k)))
+
+series_levels <- c(pcn_name, "Typical PCN in England")
+role_long <- bind_rows(
+  transmute(role_data, report_role, value = fte_per_10k, series = series_levels[1]),
+  transmute(role_data, report_role, value = national_median_per_10k, series = series_levels[2])
+) |>
+  mutate(series = factor(series, levels = series_levels))
+
+ggplot(role_long, aes(x = value, y = report_role)) +
+  geom_line(aes(group = report_role), colour = col_gridline, linewidth = 1.6) +
+  geom_point(aes(colour = series, shape = series), size = 2.6) +
+  scale_colour_manual(values = setNames(c(col_accent, col_ink_muted), series_levels)) +
+  scale_shape_manual(values = setNames(c(16, 124), series_levels)) +
+  labs(x = "ARRS FTE per 10,000 patients", colour = NULL, shape = NULL) +
+  chart_theme +
+  theme(
+    legend.position = "top", legend.justification = "left",
+    legend.text = element_text(colour = col_ink_secondary, size = 7.5),
+    axis.title.x = element_text(colour = col_ink_secondary, size = 7.5),
+    panel.grid.major.y = element_blank()
+  )
 ```
 
 # Limitations
 
 - **A question, not a verdict.** Case-mix, coding practice and local
   context vary in ways this data doesn't capture.
-- **Missing or implausible staffing returns are left out, not counted as
-  zero.** `{r} n_pcns_excluded` PCNs are removed entirely (no ARRS
-  return, or a return too implausible to be one PCN's), as are
-  `{r} fmt_n(n_practices_no_fte)` practices (`{r} fmt_n(list_size_no_fte)`
-  patients) with no GP or direct-patient-care staff return — their
-  patients and staff both. `{r} this_pcn_coverage_sentence`
+- **ARRS-eligible roles, not confirmed ARRS funding.** We count staff the
+  PCN employs in roles the 2026/27 Network Contract DES says ARRS can fund.
+  Public data doesn't show how each post is actually paid for. Staff in
+  equivalent roles employed directly by practices aren't counted, and some
+  PCNs may record ARRS staff under a lead practice or federation instead.
+- **Missing or implausible returns are left out, not counted as zero.**
+  `{r} n_pcns_excluded` PCNs are removed (no ARRS return, no ARRS roles in
+  their return, or a return too implausible to be one PCN's).
 - **"Expected" FTE is a national average, not an entitlement.** It's
   fitted from national data on each PCN's age, sex and deprivation mix.
   FTE isn't a true count, so the control limits are an approximation.
 - **Our own weights, not the NHS Carr-Hill formula**, whose coefficients
-  we couldn't verify. Deprivation weights agree closely with Mukhtar et
+  we couldn't verify. Deprivation weights broadly agree with Mukhtar et
   al. 2018; age weights don't — an open question. Morbidity isn't
   included.
 - **No £ figures.** No public source reports ARRS spend below ICB level.
-  Appointment and practice-level detail is available in a follow-up
-  conversation.

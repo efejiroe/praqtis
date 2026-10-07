@@ -6,6 +6,32 @@ been done and why, without re-deriving it from `git log` or conversation
 history. Newest entries at the top. Each entry links the commit where
 one exists.
 
+## 2026-10-07
+
+- [x] **Made the staffing check ARRS-only**, after Joe's review found
+      the "ARRS" report headlining a total-FTE figure. ARRS roles mapped
+      from the Network Contract DES specification 2026/27 (PRN02483) into
+      `dat/in/arrs_roles.csv`; Clinical Directors, managers and admin no
+      longer count. Model refitted on ARRS FTE.
+- [x] **Exclusions updated for ARRS-only:** practices with no GP FTE
+      return no longer drop out (ARRS staff serve the whole PCN); PCNs
+      whose return lists no ARRS roles at all are now excluded, like
+      no-return PCNs. 1,265 PCNs in the funnel, 33 excluded.
+- [x] **Report:** plain-English benchmarking explanation, labelled funnel
+      and gap-chart axes, and a new "Which ARRS roles?" chart (FTE per
+      10,000 patients vs national median). Still two pages.
+- [x] **Example PCN changed to Hayes Wick (U98580, SEL):** Heritage is
+      within range on ARRS-only (92%). North Lewisham was considered but
+      reports no pharmacy roles at all, which may be a recording gap.
+
+## Not yet done / open (2026-10-07)
+
+- [ ] Access indicators phase (appointments, GP Patient Survey) — agreed
+      with the user as the next phase, after this revision is reviewed.
+- [ ] 117 PCNs sit below the 99.8% limit on ARRS-only staffing, a heavy
+      tail that may partly be ARRS staff recorded outside the PCN return.
+      Worth investigating before batch rendering.
+
 ## 2026-08-16
 
 - [x] **Added DNA (Did Not Attend) rate and a practice-level drill-down**

@@ -5,7 +5,7 @@
 # The zip bundles three months (Apr/May/Jun 2026) of practice-level
 # crosstabs — only June is read, for consistency with the June 2026
 # vintage already used by fetch_practice_gp_workforce()/
-# fetch_pcn_arrs_workforce(). Confirmed empirically (per CLAUDE.md):
+# fetch_pcn_workforce_roles(). Confirmed empirically (per CLAUDE.md):
 # each row is one practice x HCP type x appointment mode x national
 # category x booking-interval x status combination, with columns
 # GP_CODE, COUNT_OF_APPOINTMENTS, APPT_STATUS ("Attended"/"DNA"/

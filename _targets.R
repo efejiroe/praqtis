@@ -10,7 +10,9 @@ list(
   tar_target(practice_registration, fetch_gp_registration_practice()),
   tar_target(practice_imd, fetch_practice_imd()),
   tar_target(practice_gp_workforce, fetch_practice_gp_workforce()),
-  tar_target(pcn_arrs_workforce, fetch_pcn_arrs_workforce()),
+  tar_target(pcn_workforce_roles, fetch_pcn_workforce_roles()),
+  tar_target(arrs_roles_file, "dat/in/arrs_roles.csv", format = "file"),
+  tar_target(arrs_roles, read_arrs_roles(arrs_roles_file)),
   tar_target(practice_dna, fetch_practice_dna()),
 
   # Aggregate to PCN, nationally — the funnel plot's control limits need
@@ -29,30 +31,17 @@ list(
     pcn_imd(practice_imd, practice_registration, epcn_mapping, national_pcn_primary_icb)
   ),
 
-  # Practices with no usable FTE return are dropped from both the patient
-  # and the staff side of the staffing funnel (see aggregate_pcn.R::
-  # practices_without_fte()); national_pcn_list_size above stays the full
-  # registered list for the report header.
+  # ARRS-eligible roles only (see fetch_workforce.R::read_arrs_roles()) —
+  # PCN-native, so there's no practice-level version to collate first.
   tar_target(
-    national_practices_without_fte,
-    practices_without_fte(national_practice_staffing_snapshot)
-  ),
-  tar_target(
-    national_pcn_fte_coverage,
-    pcn_fte_coverage(national_practice_staffing_snapshot, epcn_mapping, national_pcn_primary_icb)
-  ),
-  tar_target(
-    national_pcn_list_size_fte_reported,
-    pcn_list_size(
-      practice_registration, epcn_mapping, national_pcn_primary_icb,
-      exclude_practices = national_practices_without_fte
-    )
+    national_pcn_arrs_role_fte,
+    pcn_arrs_role_fte(pcn_workforce_roles, arrs_roles)
   ),
   tar_target(
     national_pcn_workforce,
     pcn_workforce(
-      practice_gp_workforce, pcn_arrs_workforce, epcn_mapping, national_pcn_primary_icb,
-      exclude_practices = national_practices_without_fte
+      practice_gp_workforce, pcn_workforce_roles, national_pcn_arrs_role_fte,
+      epcn_mapping, national_pcn_primary_icb
     )
   ),
   tar_target(
@@ -67,8 +56,7 @@ list(
     national_pcn_composition,
     pcn_need_composition(
       national_practice_need_bands, national_practice_imd_quintile,
-      national_pcn_list_size_fte_reported, epcn_mapping,
-      exclude_practices = national_practices_without_fte
+      national_pcn_list_size, epcn_mapping
     )
   ),
 
@@ -109,7 +97,11 @@ list(
   ),
   tar_target(
     national_pcn_exclusions,
-    pcn_exclusion_list(national_pcn_workforce, national_pcn_fte_coverage, national_pcn_list_size)
+    pcn_exclusion_list(national_pcn_workforce, national_pcn_list_size)
+  ),
+  tar_target(
+    national_arrs_role_benchmarks,
+    arrs_role_benchmarks(national_pcn_arrs_role_fte, national_pcn_list_size, national_staffing_funnel_flags)
   ),
   tar_target(
     pcn_exclusions_md,

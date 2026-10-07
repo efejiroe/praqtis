@@ -1,0 +1,46 @@
+STAFF_ROLE,DETAILED_STAFF_ROLE,is_arrs,report_role,spec_ref
+Pharmacists,Pharmacist,TRUE,Pharmacists,Table 2 (clinical pharmacists)
+Advanced Pharmacist Practitioners,Advanced Pharmacist Practitioner,TRUE,Pharmacists,B.15 (advanced practitioners)
+Pharmacy Technicians,Pharmacy Technician,TRUE,Pharmacy technicians,Table 2
+Care Coordinators,Care Coordinator,TRUE,Care coordinators,Table 2
+Social Prescribing Link Workers,Social Prescribing Link Worker,TRUE,Social prescribing link workers,Table 2
+Health and Wellbeing Coaches,Health and Wellbeing Coach,TRUE,Health and wellbeing coaches,Table 2
+General Practice Assistants,General Practice Assistant,TRUE,General practice assistants,Table 2; B.16
+Physician Associates,Physician Associate,TRUE,Physician associates,Table 2
+Apprentices,Apprentice - Physician Associate,TRUE,Physician associates,Table 2 (apprentice physician assistants)
+Physiotherapists,Physiotherapist,TRUE,Physiotherapists,Table 2 (first contact physiotherapists)
+Advanced Physiotherapist Practitioners,Advanced Physiotherapist Practitioner,TRUE,Physiotherapists,B.15 (advanced practitioners)
+Paramedics,Paramedic,TRUE,Paramedics,Table 2 (community paramedics); B.13
+Advanced Paramedic Practitioners,Advanced Paramedic Practitioner,TRUE,Paramedics,B.15 (advanced practitioners)
+Nursing Associates,Nursing Associate,TRUE,Nursing associates,Table 2; B.11
+Trainee Nursing Associates,Trainee Nursing Associate,TRUE,Nursing associates,Table 2 (student nursing associates); B.12
+Advanced Nurse Practitioners,Advanced Nurse Practitioner,TRUE,Nurses,B.15 (advanced practitioner nurses)
+Enhanced Practice Nurses,Enhanced Practice Nurse,TRUE,Nurses,Table 2; B.18
+Salaried GPs,Salaried By PCN,TRUE,GPs,7.3.8; B.19 (general medical practitioners)
+Dieticians,Dietician,TRUE,"Dietitians, podiatrists and OTs",Table 2
+Advanced Dietician Practitioners,Advanced Dietician Practitioner,TRUE,"Dietitians, podiatrists and OTs",B.15 (advanced practitioners)
+Podiatrists,Podiatrist,TRUE,"Dietitians, podiatrists and OTs",Table 2
+Advanced Podiatrist Practitioners,Advanced Podiatrist Practitioner,TRUE,"Dietitians, podiatrists and OTs",B.15 (advanced practitioners)
+Therapists,Therapist- Occupational Therapist,TRUE,"Dietitians, podiatrists and OTs",Table 2; B.10
+Advanced Occupational Therapist Practitioners,Advanced Occupational Therapist Practitioner,TRUE,"Dietitians, podiatrists and OTs",B.15 (advanced practitioners)
+Healthcare Support Workers,Healthcare Support Worker,TRUE,Healthcare support workers,Table 2; B.20
+Digital and Transformation Leads,Digital and Transformation Lead,TRUE,Digital and transformation leads,Table 2; B.17
+Social Prescribing Link Workers (Mental Health Practitioners),Social Prescribing Link Worker (Mental Health Practitioner - Adult),TRUE,Mental health practitioners,7.3.3; B.14
+Social Prescribing Link Workers (Mental Health Practitioners),Social Prescribing Link Worker (Mental Health Practitioner - Children and Young People),TRUE,Mental health practitioners,7.3.6; B.14
+Mental Health and Wellbeing Practitioners (Mental Health Practitioners),Mental Health and Wellbeing Practitioner (Mental Health Practitioner - Adult),TRUE,Mental health practitioners,7.3.3; B.14
+Mental Health and Wellbeing Practitioners (Mental Health Practitioners),Mental Health and Wellbeing Practitioner (Mental Health Practitioner - Children and Young People),TRUE,Mental health practitioners,7.3.6; B.14
+Applied Psychologists – Clinical (Mental Health Practitioners),Applied Psychologist – Clinical (Mental Health Practitioner - Adult),TRUE,Mental health practitioners,7.3.3; B.14
+Clinical Associates in Psychology (Mental Health Practitioners),Clinical Associate in Psychology (Mental Health Practitioner - Adult),TRUE,Mental health practitioners,7.3.3; B.14
+Therapists (Mental Health Practitioners),Therapist- Counsellor (Mental Health Practitioner - Adult),TRUE,Mental health practitioners,7.3.3; B.14
+Therapists (Mental Health Practitioners),Therapist- Counsellor (Mental Health Practitioner - Children and Young People),TRUE,Mental health practitioners,7.3.6; B.14
+Therapists (Mental Health Practitioners),Therapist- Occupational Therapist (Mental Health Practitioner - Adult),TRUE,Mental health practitioners,7.3.3; B.14
+Therapists (Mental Health Practitioners),Therapist- Occupational Therapist (Mental Health Practitioner - Children and Young People),TRUE,Mental health practitioners,7.3.6; B.14
+Therapists (Mental Health Practitioners),Therapist- Other (Mental Health Practitioner - Adult),TRUE,Mental health practitioners,7.3.3; B.14
+Trainee Mental Health and Wellbeing Practitioners (Mental Health Practitioners),Trainee Mental Health and Wellbeing Practitioner (Mental Health Practitioner - Adult),TRUE,Mental health practitioners,7.3.3; B.14
+Community Mental Health Nurses (Mental Health Practitioners),Community Mental Health Nurse (Mental Health Practitioner - Adult),TRUE,Mental health practitioners,7.3.3; B.14
+Community Mental Health Nurses (Mental Health Practitioners),Community Mental Health Nurse (Mental Health Practitioner - Children and Young People),TRUE,Mental health practitioners,7.3.6; B.14
+Medical Clinical Director (GP),Clinical Director – Medical,FALSE,,Paid from Core PCN Funding (Table 1)
+Clinical Director (DPC),Clinical Director – DPC,FALSE,,Paid from Core PCN Funding (Table 1)
+Clinical Director (Nurse),Clinical Director – Nurse,FALSE,,Paid from Core PCN Funding (Table 1)
+Salaried GPs,Salaried By Practice,FALSE,,Practice-employed; not a PCN claim
+GP Locums,GP Locum,FALSE,,Not named; locum engagement
