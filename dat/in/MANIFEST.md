@@ -143,3 +143,12 @@ the vintage the file itself claims to be.
   pharmacists or pharmacy technicians, and its practices' own pharmacy
   rows are blank — possibly the same issue for one role; not excluded,
   but not used as a report example either.
+- GPWPracticeCSV's high-level file has a `DETAILED_STAFF_ROLE == "Total"`
+  row in every staff group beside the individual role rows. Summing all
+  rows doubles FTE (GP FTE 75,707 summed vs 37,843 from the Total row,
+  June 2026); earlier builds did this for practice GP + DPC FTE. Fixed
+  2026-10-07: `fetch_practice_workforce_totals()` reads Total rows only,
+  which also gives headcount counting each person once.
+- PCN Workforce individual file: 6,365 rows (17% of FTE) are "NWRS
+  contracted services" with no `UNIQUE_IDENTIFIER`, so ARRS headcount
+  (and headcount/FTE) can't be measured for them.

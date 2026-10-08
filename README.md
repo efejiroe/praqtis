@@ -1,5 +1,9 @@
 # PCN-ARRS
 
+> **Status: discontinued (October 2026).** The pipeline builds and the
+> report renders, but the project is no longer being developed. See
+> TASKLOG.md for where it stopped and what was left open.
+
 A reproducible NHS primary-care analytics pipeline that identifies where
 a small operational change would yield the largest improvement for a
 Primary Care Network (PCN), and renders the finding as a parameterised,

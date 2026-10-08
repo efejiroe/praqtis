@@ -6,6 +6,12 @@ been done and why, without re-deriving it from `git log` or conversation
 history. Newest entries at the top. Each entry links the commit where
 one exists.
 
+## 2026-10-08
+
+- [x] **Project stopped** at the user's decision. Last state: ARRS-only
+      staffing funnel and two-page report (example: Hayes Wick, U98580),
+      reviewed externally once. The open items below are left as-is.
+
 ## 2026-10-07
 
 - [x] **Made the staffing check ARRS-only**, after Joe's review found
@@ -23,6 +29,16 @@ one exists.
 - [x] **Example PCN changed to Hayes Wick (U98580, SEL):** Heritage is
       within range on ARRS-only (92%). North Lewisham was considered but
       reports no pharmacy roles at all, which may be a recording gap.
+
+- [x] **Tested and dropped the GP "fragmentation" story** (headcount per
+      FTE -> longer waits). ARRS headcount isn't measurable (17% of ARRS
+      FTE has no person ID), so tested on practice GPs against GPAD
+      booking intervals. No association at PCN or practice level,
+      adjusted or not (odds ratios ~1.00 per +0.1 headcount/FTE, tight
+      CIs). Analysis code discarded at the user's request; result kept
+      here so it isn't re-tested.
+- [x] **Fixed practice FTE double-counting**: every staff group's "Total"
+      row was being summed with its role rows. Internal drill-down only.
 
 ## Not yet done / open (2026-10-07)
 

@@ -10,19 +10,40 @@ download_and_cache_zip <- function(url, zip_name, dest_dir = "dat/in") {
   zip_path
 }
 
-# Practice-level GP + Direct Patient Care FTE — the "Total Practice FTE"
-# term in the staffing funnel check's actual-FTE figure (see ref/concept_note.md).
-fetch_practice_gp_workforce <- function(dest_dir = "dat/in") {
+# Practice-level FTE and headcount per staff group (GP, Nurses, Direct
+# Patient Care, Admin/Non-Clinical), from each group's "Total" row only.
+# Every staff group carries a DETAILED_STAFF_ROLE == "Total" row beside
+# its individual role rows; summing all rows double-counts (an earlier
+# version did exactly that, doubling practice FTE). Total is also the
+# right headcount: it counts people once, where role rows count a person
+# once per role they hold. VALUE is NA where a practice didn't report a
+# group — kept NA, not coalesced to 0.
+fetch_practice_workforce_totals <- function(dest_dir = "dat/in") {
   zip_path <- download_and_cache_zip(
     "https://files.digital.nhs.uk/B1/F5AC73/GPWPracticeCSV.062026.zip",
     "GPWPracticeCSV.062026.zip",
     dest_dir
   )
   csv_name <- "3 General Practice – June 2026 Practice Level - High level.csv"
-  readr::read_csv(unz(zip_path, csv_name), show_col_types = FALSE) |>
-    dplyr::filter(STAFF_GROUP %in% c("GP", "Direct Patient Care"), MEASURE == "FTE") |>
-    dplyr::group_by(PRACTICE_CODE = PRAC_CODE) |>
-    dplyr::summarise(practice_fte = sum(VALUE, na.rm = TRUE), .groups = "drop")
+  totals <- readr::read_csv(unz(zip_path, csv_name), show_col_types = FALSE) |>
+    dplyr::filter(DETAILED_STAFF_ROLE == "Total") |>
+    dplyr::select(PRACTICE_CODE = PRAC_CODE, STAFF_GROUP, MEASURE, VALUE)
+
+  dplyr::inner_join(
+    dplyr::filter(totals, MEASURE == "FTE") |> dplyr::select(PRACTICE_CODE, STAFF_GROUP, fte = VALUE),
+    dplyr::filter(totals, MEASURE == "Headcount") |> dplyr::select(PRACTICE_CODE, STAFF_GROUP, headcount = VALUE),
+    by = c("PRACTICE_CODE", "STAFF_GROUP")
+  )
+}
+
+# Practice-level GP + Direct Patient Care FTE, for the internal practice
+# drill-down (aggregate_pcn.R::practice_staffing_snapshot()). Not part of
+# the ARRS-only staffing funnel.
+practice_gp_dpc_fte <- function(practice_workforce_totals) {
+  practice_workforce_totals |>
+    dplyr::filter(STAFF_GROUP %in% c("GP", "Direct Patient Care")) |>
+    dplyr::group_by(PRACTICE_CODE) |>
+    dplyr::summarise(practice_fte = sum(fte, na.rm = TRUE), .groups = "drop")
 }
 
 # PCN-employed staff FTE by role, from the individual-level PCN Workforce
